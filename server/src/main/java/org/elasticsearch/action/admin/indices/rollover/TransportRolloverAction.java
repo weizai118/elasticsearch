@@ -31,7 +31,6 @@ import org.elasticsearch.action.support.IndicesOptions;
 import org.elasticsearch.action.support.master.TransportMasterNodeAction;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.cluster.ClusterState;
-import org.elasticsearch.cluster.ClusterStateUpdateTask;
 import org.elasticsearch.cluster.block.ClusterBlockException;
 import org.elasticsearch.cluster.block.ClusterBlockLevel;
 import org.elasticsearch.cluster.metadata.AliasAction;
@@ -132,9 +131,7 @@ public class TransportRolloverAction extends TransportMasterNodeAction<RolloverR
                             new RolloverResponse(sourceIndexName, rolloverIndexName, conditionResults, true, false, false, false));
                         return;
                     }
-                    List<Condition> metConditions =  rolloverRequest.getConditions().values().stream()
-                        .filter(condition -> conditionResults.get(condition.toString())).collect(Collectors.toList());
-                    if (conditionResults.size() == 0 || metConditions.size() > 0) {
+                    if (conditionResults.size() == 0 || conditionResults.values().stream().anyMatch(result -> result)) {
                         CreateIndexClusterStateUpdateRequest updateRequest = prepareCreateIndexRequest(unresolvedName, rolloverIndexName,
                             rolloverRequest);
                         createIndexService.createIndex(updateRequest, ActionListener.wrap(createIndexClusterStateUpdateResponse -> {
@@ -144,33 +141,13 @@ public class TransportRolloverAction extends TransportMasterNodeAction<RolloverR
                                     rolloverRequest),
                                 ActionListener.wrap(aliasClusterStateUpdateResponse -> {
                                     if (aliasClusterStateUpdateResponse.isAcknowledged()) {
-                                        clusterService.submitStateUpdateTask("update_rollover_info", new ClusterStateUpdateTask() {
-                                            @Override
-                                            public ClusterState execute(ClusterState currentState) {
-                                                RolloverInfo rolloverInfo = new RolloverInfo(rolloverRequest.getAlias(), metConditions,
-                                                    threadPool.absoluteTimeInMillis());
-                                                return ClusterState.builder(currentState)
-                                                    .metaData(MetaData.builder(currentState.metaData())
-                                                        .put(IndexMetaData.builder(currentState.metaData().index(sourceIndexName))
-                                                            .putRolloverInfo(rolloverInfo))).build();
-                                            }
-
-                                            @Override
-                                            public void onFailure(String source, Exception e) {
-                                                listener.onFailure(e);
-                                            }
-
-                                            @Override
-                                            public void clusterStateProcessed(String source, ClusterState oldState, ClusterState newState) {
-                                                activeShardsObserver.waitForActiveShards(new String[]{rolloverIndexName},
-                                                    rolloverRequest.getCreateIndexRequest().waitForActiveShards(),
-                                                    rolloverRequest.masterNodeTimeout(),
-                                                    isShardsAcknowledged -> listener.onResponse(new RolloverResponse(
-                                                        sourceIndexName, rolloverIndexName, conditionResults, false, true, true,
-                                                        isShardsAcknowledged)),
-                                                    listener::onFailure);
-                                            }
-                                        });
+                                        activeShardsObserver.waitForActiveShards(new String[]{rolloverIndexName},
+                                            rolloverRequest.getCreateIndexRequest().waitForActiveShards(),
+                                            rolloverRequest.masterNodeTimeout(),
+                                            isShardsAcknowledged -> listener.onResponse(new RolloverResponse(
+                                                                sourceIndexName, rolloverIndexName, conditionResults, false, true, true,
+                                                                isShardsAcknowledged)),
+                                            listener::onFailure);
                                     } else {
                                         listener.onResponse(new RolloverResponse(sourceIndexName, rolloverIndexName, conditionResults,
                                                                                     false, true, false, false));
@@ -196,7 +173,7 @@ public class TransportRolloverAction extends TransportMasterNodeAction<RolloverR
     static IndicesAliasesClusterStateUpdateRequest prepareRolloverAliasesUpdateRequest(String oldIndex, String newIndex,
                                                                                        RolloverRequest request) {
         List<AliasAction> actions = unmodifiableList(Arrays.asList(
-                new AliasAction.Add(newIndex, request.getAlias(), null, null, null, null),
+                new AliasAction.Add(newIndex, request.getAlias(), null, null, null),
                 new AliasAction.Remove(oldIndex, request.getAlias())));
         final IndicesAliasesClusterStateUpdateRequest updateRequest = new IndicesAliasesClusterStateUpdateRequest(actions)
             .ackTimeout(request.ackTimeout())

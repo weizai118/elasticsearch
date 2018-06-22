@@ -109,4 +109,3 @@ The API returns the following results:
   }
 ]
 ----
-// NOTCONSOLE

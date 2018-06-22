@@ -5,7 +5,7 @@
 <titleabbrev>Validate Detectors </titleabbrev>
 ++++
 
-Validates detector configuration information.
+This API validates detector configuration information.
 
 ==== Request
 
@@ -28,6 +28,7 @@ see <<ml-detectorconfig,detector configuration objects>>.
 You must have `manage_ml`, or `manage` cluster privileges to use this API.
 For more information, see
 {xpack-ref}/security-privileges.html[Security Privileges].
+//<<privileges-list-cluster>>.
 
 
 ==== Examples
@@ -44,6 +45,7 @@ POST _xpack/ml/anomaly_detectors/_validate/detector
 }
 --------------------------------------------------
 // CONSOLE
+// TEST[skip:todo]
 
 When the validation completes, you receive the following results:
 [source,js]
@@ -52,4 +54,3 @@ When the validation completes, you receive the following results:
   "acknowledged": true
 }
 ----
-// TESTRESPONSE

@@ -5,7 +5,7 @@
 <titleabbrev>Get Calendars</titleabbrev>
 ++++
 
-Retrieves configuration information for calendars.
+This API enables you to retrieve configuration information for calendars.
 
 
 ==== Request

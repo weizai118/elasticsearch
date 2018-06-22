@@ -6,6 +6,7 @@
 package org.elasticsearch.xpack.ml.integration;
 
 import org.elasticsearch.action.ActionListener;
+import org.elasticsearch.cluster.ClusterChangedEvent;
 import org.elasticsearch.cluster.ClusterState;
 import org.elasticsearch.cluster.ClusterStateUpdateTask;
 import org.elasticsearch.cluster.metadata.MetaData;
@@ -46,7 +47,7 @@ public class DeleteJobIT extends BaseMlIntegTestCase {
             }
 
             @Override
-            public void clusterStateProcessed(String source, ClusterState oldState, ClusterState newState) {
+            public void clusterStatePublished(ClusterChangedEvent clusterChangedEvent) {
                 markAsDeletedLatch.countDown();
             }
         });
@@ -89,7 +90,7 @@ public class DeleteJobIT extends BaseMlIntegTestCase {
             }
 
             @Override
-            public void clusterStateProcessed(String source, ClusterState oldState, ClusterState newState) {
+            public void clusterStatePublished(ClusterChangedEvent clusterChangedEvent) {
                 removeJobLatch.countDown();
             }
         });

@@ -35,8 +35,6 @@ include::tokenfilters/word-delimiter-tokenfilter.asciidoc[]
 
 include::tokenfilters/word-delimiter-graph-tokenfilter.asciidoc[]
 
-include::tokenfilters/multiplexer-tokenfilter.asciidoc[]
-
 include::tokenfilters/stemmer-tokenfilter.asciidoc[]
 
 include::tokenfilters/stemmer-override-tokenfilter.asciidoc[]
@@ -98,5 +96,3 @@ include::tokenfilters/decimal-digit-tokenfilter.asciidoc[]
 include::tokenfilters/fingerprint-tokenfilter.asciidoc[]
 
 include::tokenfilters/minhash-tokenfilter.asciidoc[]
-
-include::tokenfilters/remove-duplicates-tokenfilter.asciidoc[]

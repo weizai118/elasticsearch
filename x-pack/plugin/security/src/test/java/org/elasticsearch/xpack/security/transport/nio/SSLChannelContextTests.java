@@ -345,7 +345,7 @@ public class SSLChannelContextTests extends ESTestCase {
         context.closeChannel();
 
         ArgumentCaptor<WriteOperation> captor = ArgumentCaptor.forClass(WriteOperation.class);
-        verify(selector).writeToChannel(captor.capture());
+        verify(selector).queueWriteInChannelBuffer(captor.capture());
 
         context.queueWriteOperation(captor.getValue());
         verify(sslDriver).initiateClose();

@@ -20,10 +20,10 @@
 package org.elasticsearch.rest;
 
 import org.elasticsearch.ElasticsearchException;
+import org.elasticsearch.common.Nullable;
 import org.elasticsearch.common.bytes.BytesReference;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -31,7 +31,8 @@ import java.util.Set;
 
 public abstract class RestResponse {
 
-    private Map<String, List<String>> customHeaders;
+    protected Map<String, List<String>> customHeaders;
+
 
     /**
      * The response content type.
@@ -80,13 +81,10 @@ public abstract class RestResponse {
     }
 
     /**
-     * Returns custom headers that have been added. This method should not be used to mutate headers.
+     * Returns custom headers that have been added, or null if none have been set.
      */
+    @Nullable
     public Map<String, List<String>> getHeaders() {
-        if (customHeaders == null) {
-            return Collections.emptyMap();
-        } else {
-            return customHeaders;
-        }
+        return customHeaders;
     }
 }

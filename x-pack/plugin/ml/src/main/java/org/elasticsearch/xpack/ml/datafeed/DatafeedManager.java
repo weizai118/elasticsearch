@@ -88,7 +88,7 @@ public class DatafeedManager extends AbstractComponent {
                 datafeedJob -> {
                     Holder holder = new Holder(task, datafeed, datafeedJob, new ProblemTracker(auditor, job.getId()), taskHandler);
                     runningDatafeedsOnThisNode.put(task.getAllocationId(), holder);
-                    task.updatePersistentTaskState(DatafeedState.STARTED, new ActionListener<PersistentTask<?>>() {
+                    task.updatePersistentStatus(DatafeedState.STARTED, new ActionListener<PersistentTask<?>>() {
                         @Override
                         public void onResponse(PersistentTask<?> persistentTask) {
                             taskRunner.runWhenJobIsOpened(task);

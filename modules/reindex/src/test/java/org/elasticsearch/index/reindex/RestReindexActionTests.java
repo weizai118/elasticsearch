@@ -89,7 +89,6 @@ public class RestReindexActionTests extends ESTestCase {
         assertEquals("http", info.getScheme());
         assertEquals("example.com", info.getHost());
         assertEquals(9200, info.getPort());
-        assertNull(info.getPathPrefix());
         assertEquals(RemoteInfo.DEFAULT_SOCKET_TIMEOUT, info.getSocketTimeout()); // Didn't set the timeout so we should get the default
         assertEquals(RemoteInfo.DEFAULT_CONNECT_TIMEOUT, info.getConnectTimeout()); // Didn't set the timeout so we should get the default
 
@@ -97,30 +96,8 @@ public class RestReindexActionTests extends ESTestCase {
         assertEquals("https", info.getScheme());
         assertEquals("other.example.com", info.getHost());
         assertEquals(9201, info.getPort());
-        assertNull(info.getPathPrefix());
         assertEquals(RemoteInfo.DEFAULT_SOCKET_TIMEOUT, info.getSocketTimeout());
         assertEquals(RemoteInfo.DEFAULT_CONNECT_TIMEOUT, info.getConnectTimeout());
-
-        info = buildRemoteInfoHostTestCase("https://other.example.com:9201/");
-        assertEquals("https", info.getScheme());
-        assertEquals("other.example.com", info.getHost());
-        assertEquals(9201, info.getPort());
-        assertEquals("/", info.getPathPrefix());
-        assertEquals(RemoteInfo.DEFAULT_SOCKET_TIMEOUT, info.getSocketTimeout());
-        assertEquals(RemoteInfo.DEFAULT_CONNECT_TIMEOUT, info.getConnectTimeout());
-
-        info = buildRemoteInfoHostTestCase("https://other.example.com:9201/proxy-path/");
-        assertEquals("https", info.getScheme());
-        assertEquals("other.example.com", info.getHost());
-        assertEquals(9201, info.getPort());
-        assertEquals("/proxy-path/", info.getPathPrefix());
-        assertEquals(RemoteInfo.DEFAULT_SOCKET_TIMEOUT, info.getSocketTimeout());
-        assertEquals(RemoteInfo.DEFAULT_CONNECT_TIMEOUT, info.getConnectTimeout());
-
-        final IllegalArgumentException exception = expectThrows(IllegalArgumentException.class,
-            () -> buildRemoteInfoHostTestCase("https"));
-        assertEquals("[host] must be of the form [scheme]://[host]:[port](/[pathPrefix])? but was [https]",
-            exception.getMessage());
     }
 
     public void testReindexFromRemoteRequestParsing() throws IOException {

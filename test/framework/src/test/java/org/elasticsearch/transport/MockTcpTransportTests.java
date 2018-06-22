@@ -21,7 +21,6 @@ package org.elasticsearch.transport;
 import org.elasticsearch.Version;
 import org.elasticsearch.cluster.node.DiscoveryNode;
 import org.elasticsearch.common.io.stream.NamedWriteableRegistry;
-import org.elasticsearch.common.network.CloseableChannel;
 import org.elasticsearch.common.network.NetworkService;
 import org.elasticsearch.common.settings.ClusterSettings;
 import org.elasticsearch.common.settings.Settings;
@@ -66,7 +65,7 @@ public class MockTcpTransportTests extends AbstractSimpleTransportTestCase {
         final MockTcpTransport t = (MockTcpTransport) transport;
         @SuppressWarnings("unchecked") final TcpTransport.NodeChannels channels =
                 (TcpTransport.NodeChannels) connection;
-        CloseableChannel.closeChannels(channels.getChannels().subList(0, randomIntBetween(1, channels.getChannels().size())), true);
+        TcpChannel.closeChannels(channels.getChannels().subList(0, randomIntBetween(1, channels.getChannels().size())), true);
     }
 
 }

@@ -19,7 +19,9 @@
 
 package org.elasticsearch.gradle.doc
 
-import static org.elasticsearch.gradle.doc.RestTestsFromSnippetsTask.shouldAddShardFailureCheck
+import org.elasticsearch.gradle.doc.SnippetsTask.Snippet
+import org.gradle.api.InvalidUserDataException
+
 import static org.elasticsearch.gradle.doc.RestTestsFromSnippetsTask.replaceBlockQuote
 
 class RestTestFromSnippetsTaskTest extends GroovyTestCase {
@@ -44,11 +46,5 @@ class RestTestFromSnippetsTaskTest extends GroovyTestCase {
             replaceBlockQuote("\"foo\": \"\"\"bort\" baz\"\"\""));
         assertEquals("\"foo\": \"bort\\n baz\"",
             replaceBlockQuote("\"foo\": \"\"\"bort\n baz\"\"\""));
-    }
-
-    void testIsDocWriteRequest() {
-        assertTrue(shouldAddShardFailureCheck("doc-index/_search"));
-        assertFalse(shouldAddShardFailureCheck("_cat"))
-        assertFalse(shouldAddShardFailureCheck("_xpack/ml/datafeeds/datafeed-id/_preview"));
     }
 }

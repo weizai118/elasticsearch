@@ -85,16 +85,10 @@ public class BlockingClusterStatePublishResponseHandlerTests extends ESTestCase 
         int firstRound = randomIntBetween(5, nodeCount - 1);
         Thread[] threads = new Thread[firstRound];
         CyclicBarrier barrier = new CyclicBarrier(firstRound);
-        Set<DiscoveryNode> expectedFailures = new HashSet<>();
         Set<DiscoveryNode> completedNodes = new HashSet<>();
         for (int i = 0; i < threads.length; i++) {
-            final DiscoveryNode node = allNodes[i];
-            completedNodes.add(node);
-            final boolean fail = randomBoolean();
-            if (fail) {
-                expectedFailures.add(node);
-            }
-            threads[i] = new Thread(new PublishResponder(fail, node, barrier, logger, handler));
+            completedNodes.add(allNodes[i]);
+            threads[i] = new Thread(new PublishResponder(randomBoolean(), allNodes[i], barrier, logger, handler));
             threads[i].start();
         }
         // wait on the threads to finish
@@ -111,12 +105,7 @@ public class BlockingClusterStatePublishResponseHandlerTests extends ESTestCase 
         barrier = new CyclicBarrier(secondRound);
 
         for (int i = 0; i < threads.length; i++) {
-            final DiscoveryNode node = allNodes[firstRound + i];
-            final boolean fail = randomBoolean();
-            if (fail) {
-                expectedFailures.add(node);
-            }
-            threads[i] = new Thread(new PublishResponder(fail, node, barrier, logger, handler));
+            threads[i] = new Thread(new PublishResponder(randomBoolean(), allNodes[firstRound + i], barrier, logger, handler));
             threads[i].start();
         }
         // wait on the threads to finish
@@ -125,6 +114,6 @@ public class BlockingClusterStatePublishResponseHandlerTests extends ESTestCase 
         }
         assertTrue("expected handler not to timeout as all nodes responded", handler.awaitAllNodes(new TimeValue(10)));
         assertThat(handler.pendingNodes(), arrayWithSize(0));
-        assertThat(handler.getFailedNodes(), equalTo(expectedFailures));
+
     }
 }

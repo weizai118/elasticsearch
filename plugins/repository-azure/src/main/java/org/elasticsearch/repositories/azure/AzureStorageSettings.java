@@ -19,10 +19,8 @@
 
 package org.elasticsearch.repositories.azure;
 
-import com.microsoft.azure.storage.LocationMode;
 import com.microsoft.azure.storage.RetryPolicy;
 import org.elasticsearch.common.Strings;
-import org.elasticsearch.common.collect.MapBuilder;
 import org.elasticsearch.common.settings.SecureSetting;
 import org.elasticsearch.common.settings.SecureString;
 import org.elasticsearch.common.settings.Setting;
@@ -31,6 +29,7 @@ import org.elasticsearch.common.settings.Setting.Property;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.settings.SettingsException;
 import org.elasticsearch.common.unit.TimeValue;
+
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
@@ -40,7 +39,7 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 
-final class AzureStorageSettings {
+public final class AzureStorageSettings {
 
     // prefix for azure client settings
     private static final String AZURE_CLIENT_PREFIX_KEY = "azure.client.";
@@ -87,33 +86,22 @@ final class AzureStorageSettings {
     private final TimeValue timeout;
     private final int maxRetries;
     private final Proxy proxy;
-    private final LocationMode locationMode;
 
-    // copy-constructor
-    private AzureStorageSettings(String account, String key, String endpointSuffix, TimeValue timeout, int maxRetries, Proxy proxy,
-            LocationMode locationMode) {
-        this.account = account;
-        this.key = key;
-        this.endpointSuffix = endpointSuffix;
-        this.timeout = timeout;
-        this.maxRetries = maxRetries;
-        this.proxy = proxy;
-        this.locationMode = locationMode;
-    }
 
-    AzureStorageSettings(String account, String key, String endpointSuffix, TimeValue timeout, int maxRetries,
+    public AzureStorageSettings(String account, String key, String endpointSuffix, TimeValue timeout, int maxRetries,
                                 Proxy.Type proxyType, String proxyHost, Integer proxyPort) {
         this.account = account;
         this.key = key;
         this.endpointSuffix = endpointSuffix;
         this.timeout = timeout;
         this.maxRetries = maxRetries;
+
         // Register the proxy if we have any
         // Validate proxy settings
-        if (proxyType.equals(Proxy.Type.DIRECT) && ((proxyPort != 0) || Strings.hasText(proxyHost))) {
+        if (proxyType.equals(Proxy.Type.DIRECT) && (proxyPort != 0 || Strings.hasText(proxyHost))) {
             throw new SettingsException("Azure Proxy port or host have been set but proxy type is not defined.");
         }
-        if ((proxyType.equals(Proxy.Type.DIRECT) == false) && ((proxyPort == 0) || Strings.isEmpty(proxyHost))) {
+        if (proxyType.equals(Proxy.Type.DIRECT) == false && (proxyPort == 0 || Strings.isEmpty(proxyHost))) {
             throw new SettingsException("Azure Proxy type has been set but proxy host or port is not defined.");
         }
 
@@ -122,11 +110,10 @@ final class AzureStorageSettings {
         } else {
             try {
                 proxy = new Proxy(proxyType, new InetSocketAddress(InetAddress.getByName(proxyHost), proxyPort));
-            } catch (final UnknownHostException e) {
+            } catch (UnknownHostException e) {
                 throw new SettingsException("Azure proxy host is unknown.", e);
             }
         }
-        this.locationMode = LocationMode.PRIMARY_ONLY;
     }
 
     public String getKey() {
@@ -153,55 +140,37 @@ final class AzureStorageSettings {
         return proxy;
     }
 
-    public String buildConnectionString() {
-        final StringBuilder connectionStringBuilder = new StringBuilder();
-        connectionStringBuilder.append("DefaultEndpointsProtocol=https")
-                .append(";AccountName=")
-                .append(account)
-                .append(";AccountKey=")
-                .append(key);
-        if (Strings.hasText(endpointSuffix)) {
-            connectionStringBuilder.append(";EndpointSuffix=").append(endpointSuffix);
-        }
-        return connectionStringBuilder.toString();
-    }
-
-    public LocationMode getLocationMode() {
-        return locationMode;
-    }
-
     @Override
     public String toString() {
         final StringBuilder sb = new StringBuilder("AzureStorageSettings{");
-        sb.append("account='").append(account).append('\'');
+        sb.append(", account='").append(account).append('\'');
         sb.append(", key='").append(key).append('\'');
         sb.append(", timeout=").append(timeout);
         sb.append(", endpointSuffix='").append(endpointSuffix).append('\'');
         sb.append(", maxRetries=").append(maxRetries);
         sb.append(", proxy=").append(proxy);
-        sb.append(", locationMode='").append(locationMode).append('\'');
         sb.append('}');
         return sb.toString();
     }
 
     /**
-     * Parse and read all settings available under the azure.client.* namespace
+     * Parses settings and read all settings available under azure.client.*
      * @param settings settings to parse
      * @return All the named configurations
      */
     public static Map<String, AzureStorageSettings> load(Settings settings) {
         // Get the list of existing named configurations
-        final Map<String, AzureStorageSettings> storageSettings = new HashMap<>();
-        for (final String clientName : ACCOUNT_SETTING.getNamespaces(settings)) {
+        Map<String, AzureStorageSettings> storageSettings = new HashMap<>();
+        for (String clientName : ACCOUNT_SETTING.getNamespaces(settings)) {
             storageSettings.put(clientName, getClientSettings(settings, clientName));
         }
-        if (false == storageSettings.containsKey("default") && false == storageSettings.isEmpty()) {
+
+        if (storageSettings.containsKey("default") == false && storageSettings.isEmpty() == false) {
             // in case no setting named "default" has been set, let's define our "default"
             // as the first named config we get
-            final AzureStorageSettings defaultSettings = storageSettings.values().iterator().next();
+            AzureStorageSettings defaultSettings = storageSettings.values().iterator().next();
             storageSettings.put("default", defaultSettings);
         }
-        assert storageSettings.containsKey("default") || storageSettings.isEmpty() : "always have 'default' if any";
         return Collections.unmodifiableMap(storageSettings);
     }
 
@@ -222,25 +191,13 @@ final class AzureStorageSettings {
 
     private static <T> T getConfigValue(Settings settings, String clientName,
                                         Setting.AffixSetting<T> clientSetting) {
-        final Setting<T> concreteSetting = clientSetting.getConcreteSettingForNamespace(clientName);
+        Setting<T> concreteSetting = clientSetting.getConcreteSettingForNamespace(clientName);
         return concreteSetting.get(settings);
     }
 
     public static <T> T getValue(Settings settings, String groupName, Setting<T> setting) {
-        final Setting.AffixKey k = (Setting.AffixKey) setting.getRawKey();
-        final String fullKey = k.toConcreteKey(groupName).toString();
+        Setting.AffixKey k = (Setting.AffixKey) setting.getRawKey();
+        String fullKey = k.toConcreteKey(groupName).toString();
         return setting.getConcreteSetting(fullKey).get(settings);
-    }
-
-    static Map<String, AzureStorageSettings> overrideLocationMode(Map<String, AzureStorageSettings> clientsSettings,
-                                                                  LocationMode locationMode) {
-        final MapBuilder<String, AzureStorageSettings> mapBuilder = new MapBuilder<>();
-        for (final Map.Entry<String, AzureStorageSettings> entry : clientsSettings.entrySet()) {
-            final AzureStorageSettings azureSettings = new AzureStorageSettings(entry.getValue().account, entry.getValue().key,
-                    entry.getValue().endpointSuffix, entry.getValue().timeout, entry.getValue().maxRetries, entry.getValue().proxy,
-                    locationMode);
-            mapBuilder.put(entry.getKey(), azureSettings);
-        }
-        return mapBuilder.immutableMap();
     }
 }

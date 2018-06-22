@@ -22,7 +22,6 @@ package org.elasticsearch.action.admin.indices.rollover;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.common.xcontent.XContentBuilder;
-import org.elasticsearch.common.xcontent.XContentParser;
 
 import java.io.IOException;
 
@@ -61,13 +60,5 @@ public class MaxDocsCondition extends Condition<Long> {
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
         return builder.field(NAME, value);
-    }
-
-    public static MaxDocsCondition fromXContent(XContentParser parser) throws IOException {
-        if (parser.nextToken() == XContentParser.Token.VALUE_NUMBER) {
-            return new MaxDocsCondition(parser.longValue());
-        } else {
-            throw new IllegalArgumentException("invalid token: " + parser.currentToken());
-        }
     }
 }

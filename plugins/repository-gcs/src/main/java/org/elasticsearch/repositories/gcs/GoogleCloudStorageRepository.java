@@ -38,6 +38,8 @@ import static org.elasticsearch.common.settings.Setting.boolSetting;
 import static org.elasticsearch.common.settings.Setting.byteSizeSetting;
 import static org.elasticsearch.common.settings.Setting.simpleString;
 
+import com.google.cloud.storage.Storage;
+
 class GoogleCloudStorageRepository extends BlobStoreRepository {
 
     // package private for testing
@@ -84,7 +86,8 @@ class GoogleCloudStorageRepository extends BlobStoreRepository {
 
         logger.debug("using bucket [{}], base_path [{}], chunk_size [{}], compress [{}]", bucket, basePath, chunkSize, compress);
 
-        this.blobStore = new GoogleCloudStorageBlobStore(settings, bucket, clientName, storageService);
+        Storage client = SocketAccess.doPrivilegedIOException(() -> storageService.createClient(clientName));
+        this.blobStore = new GoogleCloudStorageBlobStore(settings, bucket, client);
     }
 
 

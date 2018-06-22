@@ -30,6 +30,7 @@ import org.elasticsearch.cluster.service.ClusterService;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.index.shard.ShardId;
+import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.TransportService;
 
 import java.util.List;
@@ -40,11 +41,11 @@ import java.util.List;
 public class TransportRefreshAction extends TransportBroadcastReplicationAction<RefreshRequest, RefreshResponse, BasicReplicationRequest, ReplicationResponse> {
 
     @Inject
-    public TransportRefreshAction(Settings settings, ClusterService clusterService,
+    public TransportRefreshAction(Settings settings, ThreadPool threadPool, ClusterService clusterService,
                                   TransportService transportService, ActionFilters actionFilters,
                                   IndexNameExpressionResolver indexNameExpressionResolver,
                                   TransportShardRefreshAction shardRefreshAction) {
-        super(RefreshAction.NAME, RefreshRequest::new, settings, clusterService, transportService, actionFilters, indexNameExpressionResolver, shardRefreshAction);
+        super(RefreshAction.NAME, RefreshRequest::new, settings, threadPool, clusterService, transportService, actionFilters, indexNameExpressionResolver, shardRefreshAction);
     }
 
     @Override

@@ -20,6 +20,7 @@
 package org.elasticsearch.index.mapper;
 
 import com.carrotsearch.randomizedtesting.generators.RandomPicks;
+
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.FloatPoint;
 import org.apache.lucene.document.HalfFloatPoint;
@@ -36,11 +37,10 @@ import org.apache.lucene.search.MatchNoDocsQuery;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.util.BytesRef;
-import org.apache.lucene.util.TestUtil;
 import org.elasticsearch.core.internal.io.IOUtils;
+import org.apache.lucene.util.TestUtil;
 import org.elasticsearch.index.mapper.MappedFieldType.Relation;
 import org.elasticsearch.index.mapper.NumberFieldMapper.NumberType;
-import org.elasticsearch.index.mapper.NumberFieldMapper.NumberFieldType;
 import org.hamcrest.Matchers;
 import org.junit.Before;
 
@@ -66,17 +66,6 @@ public class NumberFieldTypeTests extends FieldTypeTestCase {
     @Override
     protected MappedFieldType createDefaultFieldType() {
         return new NumberFieldMapper.NumberFieldType(type);
-    }
-
-    public void testEqualsWithDifferentNumberTypes() {
-        NumberType type = randomFrom(NumberType.values());
-        NumberFieldType fieldType = new NumberFieldType(type);
-
-        NumberType otherType = randomValueOtherThan(type,
-            () -> randomFrom(NumberType.values()));
-        NumberFieldType otherFieldType = new NumberFieldType(otherType);
-
-        assertNotEquals(fieldType, otherFieldType);
     }
 
     public void testIsFieldWithinQuery() throws IOException {

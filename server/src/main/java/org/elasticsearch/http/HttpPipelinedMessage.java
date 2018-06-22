@@ -18,17 +18,20 @@
  */
 package org.elasticsearch.http;
 
-public interface HttpPipelinedMessage extends Comparable<HttpPipelinedMessage> {
+public class HttpPipelinedMessage implements Comparable<HttpPipelinedMessage> {
 
-    /**
-     * Get the sequence number for this message.
-     *
-     * @return the sequence number
-     */
-    int getSequence();
+    private final int sequence;
+
+    public HttpPipelinedMessage(int sequence) {
+        this.sequence = sequence;
+    }
+
+    public int getSequence() {
+        return sequence;
+    }
 
     @Override
-    default int compareTo(HttpPipelinedMessage o) {
-        return Integer.compare(getSequence(), o.getSequence());
+    public int compareTo(HttpPipelinedMessage o) {
+        return Integer.compare(sequence, o.sequence);
     }
 }

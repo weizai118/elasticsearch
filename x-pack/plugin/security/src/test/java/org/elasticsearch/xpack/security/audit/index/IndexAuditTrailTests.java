@@ -33,7 +33,6 @@ import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.TransportAddress;
 import org.elasticsearch.common.util.concurrent.EsExecutors;
 import org.elasticsearch.common.util.set.Sets;
-import org.elasticsearch.http.HttpChannel;
 import org.elasticsearch.plugins.MetaDataUpgrader;
 import org.elasticsearch.plugins.Plugin;
 import org.elasticsearch.rest.RestRequest;
@@ -915,9 +914,7 @@ public class IndexAuditTrailTests extends SecurityIntegTestCase {
 
     private RestRequest mockRestRequest() {
         RestRequest request = mock(RestRequest.class);
-        HttpChannel httpChannel = mock(HttpChannel.class);
-        when(request.getHttpChannel()).thenReturn(httpChannel);
-        when(httpChannel.getRemoteAddress()).thenReturn(new InetSocketAddress(InetAddress.getLoopbackAddress(), 9200));
+        when(request.getRemoteAddress()).thenReturn(new InetSocketAddress(InetAddress.getLoopbackAddress(), 9200));
         when(request.uri()).thenReturn("_uri");
         return request;
     }

@@ -8,7 +8,10 @@ package org.elasticsearch.xpack.core.ml.action;
 import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.test.AbstractStreamableXContentTestCase;
 import org.elasticsearch.xpack.core.ml.action.PutFilterAction.Request;
-import org.elasticsearch.xpack.core.ml.job.config.MlFilterTests;
+import org.elasticsearch.xpack.core.ml.job.config.MlFilter;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class PutFilterActionRequestTests extends AbstractStreamableXContentTestCase<Request> {
 
@@ -16,7 +19,13 @@ public class PutFilterActionRequestTests extends AbstractStreamableXContentTestC
 
     @Override
     protected Request createTestInstance() {
-        return new PutFilterAction.Request(MlFilterTests.createRandom(filterId));
+        int size = randomInt(10);
+        List<String> items = new ArrayList<>(size);
+        for (int i = 0; i < size; i++) {
+            items.add(randomAlphaOfLengthBetween(1, 20));
+        }
+        MlFilter filter = new MlFilter(filterId, items);
+        return new PutFilterAction.Request(filter);
     }
 
     @Override
@@ -33,4 +42,5 @@ public class PutFilterActionRequestTests extends AbstractStreamableXContentTestC
     protected Request doParseInstance(XContentParser parser) {
         return PutFilterAction.Request.parseRequest(filterId, parser);
     }
+
 }

@@ -26,6 +26,7 @@ import org.elasticsearch.common.component.AbstractComponent;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.persistent.PersistentTasksCustomMetaData.Assignment;
 import org.elasticsearch.persistent.PersistentTasksCustomMetaData.PersistentTask;
+import org.elasticsearch.tasks.Task;
 import org.elasticsearch.tasks.TaskId;
 
 import java.util.Map;
@@ -117,7 +118,7 @@ public abstract class PersistentTasksExecutor<Params extends PersistentTaskParam
      * NOTE: The nodeOperation has to throw an exception, trigger task.markAsCompleted() or task.completeAndNotifyIfNeeded() methods to
      * indicate that the persistent task has finished.
      */
-    protected abstract void nodeOperation(AllocatedPersistentTask task, Params params, @Nullable PersistentTaskState state);
+    protected abstract void nodeOperation(AllocatedPersistentTask task, Params params, @Nullable Task.Status status);
 
     public String getExecutor() {
         return executor;

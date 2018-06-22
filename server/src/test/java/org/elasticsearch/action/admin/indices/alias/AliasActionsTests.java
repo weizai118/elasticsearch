@@ -114,7 +114,6 @@ public class AliasActionsTests extends ESTestCase {
         Map<String, Object> filter = randomBoolean() ? randomMap(5) : null;
         Object searchRouting = randomBoolean() ? randomRouting() : null;
         Object indexRouting = randomBoolean() ? randomBoolean() ? searchRouting : randomRouting() : null;
-        boolean writeIndex = randomBoolean();
         XContentBuilder b = XContentBuilder.builder(randomFrom(XContentType.values()).xContent());
         b.startObject();
         {
@@ -143,7 +142,6 @@ public class AliasActionsTests extends ESTestCase {
                 if (indexRouting != null && false == indexRouting.equals(searchRouting)) {
                     b.field("index_routing", indexRouting);
                 }
-                b.field("is_write_index", writeIndex);
             }
             b.endObject();
         }
@@ -161,7 +159,6 @@ public class AliasActionsTests extends ESTestCase {
             }
             assertEquals(Objects.toString(searchRouting, null), action.searchRouting());
             assertEquals(Objects.toString(indexRouting, null), action.indexRouting());
-            assertEquals(writeIndex, action.writeIndex());
         }
     }
 

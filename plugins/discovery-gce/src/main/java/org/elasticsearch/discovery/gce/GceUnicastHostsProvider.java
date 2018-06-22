@@ -31,7 +31,9 @@ import com.google.api.services.compute.model.Instance;
 import com.google.api.services.compute.model.NetworkInterface;
 import org.apache.logging.log4j.message.ParameterizedMessage;
 import org.apache.logging.log4j.util.Supplier;
+import org.elasticsearch.Version;
 import org.elasticsearch.cloud.gce.GceInstancesService;
+import org.elasticsearch.cluster.node.DiscoveryNode;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.component.AbstractComponent;
 import org.elasticsearch.common.network.NetworkAddress;
@@ -45,6 +47,8 @@ import org.elasticsearch.discovery.zen.UnicastHostsProvider;
 import org.elasticsearch.transport.TransportService;
 
 import static java.util.Collections.emptyList;
+import static java.util.Collections.emptyMap;
+import static java.util.Collections.emptySet;
 
 public class GceUnicastHostsProvider extends AbstractComponent implements UnicastHostsProvider {
 
@@ -68,7 +72,7 @@ public class GceUnicastHostsProvider extends AbstractComponent implements Unicas
 
     private final TimeValue refreshInterval;
     private long lastRefresh;
-    private List<TransportAddress> cachedDynamicHosts;
+    private List<DiscoveryNode> cachedDiscoNodes;
 
     public GceUnicastHostsProvider(Settings settings, GceInstancesService gceInstancesService,
             TransportService transportService,
@@ -93,7 +97,7 @@ public class GceUnicastHostsProvider extends AbstractComponent implements Unicas
      * Information can be cached using `cloud.gce.refresh_interval` property if needed.
      */
     @Override
-    public List<TransportAddress> buildDynamicHosts() {
+    public List<DiscoveryNode> buildDynamicNodes() {
         // We check that needed properties have been set
         if (this.project == null || this.project.isEmpty() || this.zones == null || this.zones.isEmpty()) {
             throw new IllegalArgumentException("one or more gce discovery settings are missing. " +
@@ -102,16 +106,16 @@ public class GceUnicastHostsProvider extends AbstractComponent implements Unicas
         }
 
         if (refreshInterval.millis() != 0) {
-            if (cachedDynamicHosts != null &&
+            if (cachedDiscoNodes != null &&
                     (refreshInterval.millis() < 0 || (System.currentTimeMillis() - lastRefresh) < refreshInterval.millis())) {
                 if (logger.isTraceEnabled()) logger.trace("using cache to retrieve node list");
-                return cachedDynamicHosts;
+                return cachedDiscoNodes;
             }
             lastRefresh = System.currentTimeMillis();
         }
         logger.debug("start building nodes list using GCE API");
 
-        cachedDynamicHosts = new ArrayList<>();
+        cachedDiscoNodes = new ArrayList<>();
         String ipAddress = null;
         try {
             InetAddress inetAddress = networkService.resolvePublishHostAddresses(
@@ -129,7 +133,7 @@ public class GceUnicastHostsProvider extends AbstractComponent implements Unicas
 
             if (instances == null) {
                 logger.trace("no instance found for project [{}], zones [{}].", this.project, this.zones);
-                return cachedDynamicHosts;
+                return cachedDiscoNodes;
             }
 
             for (Instance instance : instances) {
@@ -234,7 +238,8 @@ public class GceUnicastHostsProvider extends AbstractComponent implements Unicas
                         for (TransportAddress transportAddress : addresses) {
                             logger.trace("adding {}, type {}, address {}, transport_address {}, status {}", name, type,
                                     ip_private, transportAddress, status);
-                            cachedDynamicHosts.add(transportAddress);
+                            cachedDiscoNodes.add(new DiscoveryNode("#cloud-" + name + "-" + 0, transportAddress,
+                                    emptyMap(), emptySet(), Version.CURRENT.minimumCompatibilityVersion()));
                         }
                     }
                 } catch (Exception e) {
@@ -247,9 +252,9 @@ public class GceUnicastHostsProvider extends AbstractComponent implements Unicas
             logger.warn("exception caught during discovery", e);
         }
 
-        logger.debug("{} addresses added", cachedDynamicHosts.size());
-        logger.debug("using transport addresses {}", cachedDynamicHosts);
+        logger.debug("{} node(s) added", cachedDiscoNodes.size());
+        logger.debug("using dynamic discovery nodes {}", cachedDiscoNodes);
 
-        return cachedDynamicHosts;
+        return cachedDiscoNodes;
     }
 }

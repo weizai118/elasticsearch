@@ -26,21 +26,23 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderNames;
-import org.elasticsearch.common.bytes.BytesArray;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
+import org.elasticsearch.test.Netty4TestCase;
 import org.elasticsearch.common.network.NetworkService;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.TransportAddress;
 import org.elasticsearch.common.util.MockBigArrays;
 import org.elasticsearch.common.util.MockPageCacheRecycler;
+import org.elasticsearch.common.util.concurrent.ThreadContext;
 import org.elasticsearch.http.HttpPipelinedRequest;
 import org.elasticsearch.http.HttpServerTransport;
 import org.elasticsearch.http.NullDispatcher;
 import org.elasticsearch.indices.breaker.NoneCircuitBreakerService;
-import org.elasticsearch.rest.RestStatus;
-import org.elasticsearch.test.ESTestCase;
 import org.elasticsearch.threadpool.TestThreadPool;
 import org.elasticsearch.threadpool.ThreadPool;
 import org.junit.After;
@@ -59,7 +61,7 @@ import static org.hamcrest.Matchers.contains;
 /**
  * This test just tests, if he pipelining works in general with out any connection the Elasticsearch handler
  */
-public class Netty4HttpServerPipeliningTests extends ESTestCase {
+public class Netty4HttpServerPipeliningTests extends Netty4TestCase {
     private NetworkService networkService;
     private ThreadPool threadPool;
     private MockBigArrays bigArrays;
@@ -118,7 +120,7 @@ public class Netty4HttpServerPipeliningTests extends ESTestCase {
 
         @Override
         public ChannelHandler configureServerChannelHandler() {
-            return new CustomHttpChannelHandler(this, executorService);
+            return new CustomHttpChannelHandler(this, executorService, Netty4HttpServerPipeliningTests.this.threadPool.getThreadContext());
         }
 
         @Override
@@ -133,8 +135,8 @@ public class Netty4HttpServerPipeliningTests extends ESTestCase {
 
         private final ExecutorService executorService;
 
-        CustomHttpChannelHandler(Netty4HttpServerTransport transport, ExecutorService executorService) {
-            super(transport, transport.handlingSettings);
+        CustomHttpChannelHandler(Netty4HttpServerTransport transport, ExecutorService executorService, ThreadContext threadContext) {
+            super(transport, transport.httpHandlingSettings, threadContext);
             this.executorService = executorService;
         }
 
@@ -185,9 +187,8 @@ public class Netty4HttpServerPipeliningTests extends ESTestCase {
 
             final ByteBuf buffer = Unpooled.copiedBuffer(uri, StandardCharsets.UTF_8);
 
-            Netty4HttpRequest httpRequest = new Netty4HttpRequest(fullHttpRequest, pipelinedRequest.getSequence());
-            Netty4HttpResponse response = httpRequest.createResponse(RestStatus.OK, new BytesArray(uri.getBytes(StandardCharsets.UTF_8)));
-            response.headers().add(HttpHeaderNames.CONTENT_LENGTH, buffer.readableBytes());
+            final DefaultFullHttpResponse httpResponse = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK, buffer);
+            httpResponse.headers().add(HttpHeaderNames.CONTENT_LENGTH, buffer.readableBytes());
 
             final boolean slow = uri.matches("/slow/\\d+");
             if (slow) {
@@ -201,7 +202,7 @@ public class Netty4HttpServerPipeliningTests extends ESTestCase {
             }
 
             final ChannelPromise promise = ctx.newPromise();
-            ctx.writeAndFlush(response, promise);
+            ctx.writeAndFlush(new Netty4HttpResponse(pipelinedRequest.getSequence(), httpResponse), promise);
         }
 
     }

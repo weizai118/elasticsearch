@@ -30,7 +30,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
 
 public class GetAliasesResponse extends ActionResponse {
 
@@ -42,6 +41,7 @@ public class GetAliasesResponse extends ActionResponse {
 
     GetAliasesResponse() {
     }
+
 
     public ImmutableOpenMap<String, List<AliasMetaData>> getAliases() {
         return aliases;
@@ -75,22 +75,5 @@ public class GetAliasesResponse extends ActionResponse {
                 aliasMetaData.writeTo(out);
             }
         }
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
-        }
-        GetAliasesResponse that = (GetAliasesResponse) o;
-        return Objects.equals(aliases, that.aliases);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(aliases);
     }
 }

@@ -1,5 +1,8 @@
 ---
 "Test get old cluster job":
+  - skip:
+      version: "all"
+      reason: "@AwaitsFix: https://github.com/elastic/elasticsearch/issues/30982"
   - do:
       xpack.ml.get_jobs:
         job_id: old-cluster-job
@@ -88,9 +91,9 @@
        wait_for_status: green
 
 ---
-"Test job with pre 6.4 rules":
+"Test get job with rules":
 
   - do:
       xpack.ml.get_jobs:
-        job_id: job-with-old-rules
+        job_id: old-cluster-job-with-rules
   - match: { count: 1 }

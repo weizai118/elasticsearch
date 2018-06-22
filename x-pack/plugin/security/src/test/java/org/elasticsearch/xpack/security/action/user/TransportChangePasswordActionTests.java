@@ -8,9 +8,11 @@ package org.elasticsearch.xpack.security.action.user;
 import org.elasticsearch.ElasticsearchSecurityException;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.support.ActionFilters;
+import org.elasticsearch.cluster.metadata.IndexNameExpressionResolver;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.test.ESTestCase;
 import org.elasticsearch.test.SecuritySettingsSourceField;
+import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.TransportService;
 import org.elasticsearch.xpack.core.security.action.user.ChangePasswordRequest;
 import org.elasticsearch.xpack.core.security.action.user.ChangePasswordResponse;
@@ -50,8 +52,8 @@ public class TransportChangePasswordActionTests extends ESTestCase {
         NativeUsersStore usersStore = mock(NativeUsersStore.class);
         TransportService transportService = new TransportService(Settings.EMPTY, null, null, TransportService.NOOP_TRANSPORT_INTERCEPTOR,
                 x -> null, null, Collections.emptySet());
-        TransportChangePasswordAction action = new TransportChangePasswordAction(settings, transportService,
-                mock(ActionFilters.class), usersStore);
+        TransportChangePasswordAction action = new TransportChangePasswordAction(settings, mock(ThreadPool.class), transportService,
+                mock(ActionFilters.class), mock(IndexNameExpressionResolver.class), usersStore);
 
         ChangePasswordRequest request = new ChangePasswordRequest();
         request.username(anonymousUser.principal());
@@ -81,8 +83,8 @@ public class TransportChangePasswordActionTests extends ESTestCase {
         NativeUsersStore usersStore = mock(NativeUsersStore.class);
         TransportService transportService = new TransportService(Settings.EMPTY, null, null, TransportService.NOOP_TRANSPORT_INTERCEPTOR,
                 x -> null, null, Collections.emptySet());
-        TransportChangePasswordAction action = new TransportChangePasswordAction(Settings.EMPTY, transportService,
-                mock(ActionFilters.class), usersStore);
+        TransportChangePasswordAction action = new TransportChangePasswordAction(Settings.EMPTY, mock(ThreadPool.class), transportService,
+                mock(ActionFilters.class), mock(IndexNameExpressionResolver.class), usersStore);
 
         ChangePasswordRequest request = new ChangePasswordRequest();
         request.username(randomFrom(SystemUser.INSTANCE.principal(), XPackUser.INSTANCE.principal()));
@@ -123,8 +125,8 @@ public class TransportChangePasswordActionTests extends ESTestCase {
         }).when(usersStore).changePassword(eq(request), any(ActionListener.class));
         TransportService transportService = new TransportService(Settings.EMPTY, null, null, TransportService.NOOP_TRANSPORT_INTERCEPTOR,
                 x -> null, null, Collections.emptySet());
-        TransportChangePasswordAction action = new TransportChangePasswordAction(Settings.EMPTY, transportService,
-                mock(ActionFilters.class), usersStore);
+        TransportChangePasswordAction action = new TransportChangePasswordAction(Settings.EMPTY, mock(ThreadPool.class), transportService,
+                mock(ActionFilters.class), mock(IndexNameExpressionResolver.class), usersStore);
 
         final AtomicReference<Throwable> throwableRef = new AtomicReference<>();
         final AtomicReference<ChangePasswordResponse> responseRef = new AtomicReference<>();
@@ -164,8 +166,8 @@ public class TransportChangePasswordActionTests extends ESTestCase {
         }).when(usersStore).changePassword(eq(request), any(ActionListener.class));
         TransportService transportService = new TransportService(Settings.EMPTY, null, null, TransportService.NOOP_TRANSPORT_INTERCEPTOR,
                 x -> null, null, Collections.emptySet());
-        TransportChangePasswordAction action = new TransportChangePasswordAction(Settings.EMPTY, transportService,
-                mock(ActionFilters.class), usersStore);
+        TransportChangePasswordAction action = new TransportChangePasswordAction(Settings.EMPTY, mock(ThreadPool.class), transportService,
+                mock(ActionFilters.class), mock(IndexNameExpressionResolver.class), usersStore);
 
         final AtomicReference<Throwable> throwableRef = new AtomicReference<>();
         final AtomicReference<ChangePasswordResponse> responseRef = new AtomicReference<>();

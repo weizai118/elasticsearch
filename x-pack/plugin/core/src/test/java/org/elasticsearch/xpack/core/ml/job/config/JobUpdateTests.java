@@ -53,8 +53,10 @@ public class JobUpdateTests extends AbstractSerializingTestCase<JobUpdate> {
                 List<DetectionRule> detectionRules = null;
                 if (randomBoolean()) {
                     detectionRules = new ArrayList<>();
+                    Condition condition = new Condition(Operator.GT, "5");
                     detectionRules.add(new DetectionRule.Builder(
-                            Collections.singletonList(new RuleCondition(RuleCondition.AppliesTo.ACTUAL, Operator.GT, 5))).build());
+                            Collections.singletonList(new RuleCondition(RuleConditionType.NUMERICAL_ACTUAL, null, null, condition, null)))
+                            .setTargetFieldName("foo").build());
                 }
                 detectorUpdates.add(new JobUpdate.DetectorUpdate(i, detectorDescription, detectionRules));
             }
@@ -117,11 +119,13 @@ public class JobUpdateTests extends AbstractSerializingTestCase<JobUpdate> {
     public void testMergeWithJob() {
         List<JobUpdate.DetectorUpdate> detectorUpdates = new ArrayList<>();
         List<DetectionRule> detectionRules1 = Collections.singletonList(new DetectionRule.Builder(
-                Collections.singletonList(new RuleCondition(RuleCondition.AppliesTo.ACTUAL, Operator.GT, 5)))
-                .build());
+                Collections.singletonList(new RuleCondition(RuleConditionType.NUMERICAL_ACTUAL, null, null, new Condition(Operator.GT, "5")
+                        , null)))
+                .setTargetFieldName("mlcategory").build());
         detectorUpdates.add(new JobUpdate.DetectorUpdate(0, "description-1", detectionRules1));
         List<DetectionRule> detectionRules2 = Collections.singletonList(new DetectionRule.Builder(Collections.singletonList(
-                new RuleCondition(RuleCondition.AppliesTo.ACTUAL, Operator.GT, 5))).build());
+                new RuleCondition(RuleConditionType.NUMERICAL_ACTUAL, null, null, new Condition(Operator.GT, "5"), null)))
+                .setTargetFieldName("host").build());
         detectorUpdates.add(new JobUpdate.DetectorUpdate(1, "description-2", detectionRules2));
 
         ModelPlotConfig modelPlotConfig = new ModelPlotConfig(randomBoolean(), randomAlphaOfLength(10));

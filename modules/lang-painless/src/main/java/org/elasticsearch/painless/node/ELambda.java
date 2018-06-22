@@ -222,8 +222,7 @@ public final class ELambda extends AExpression implements ILambda {
                 ref.delegateClassName,
                 ref.delegateInvokeType,
                 ref.delegateMethodName,
-                ref.delegateType,
-                ref.isDelegateInterface ? 1 : 0
+                ref.delegateType
             );
         } else {
             // placeholder

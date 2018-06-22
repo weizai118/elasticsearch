@@ -727,9 +727,4 @@ public class AmazonS3Wrapper extends AbstractAmazonS3 {
     public HeadBucketResult headBucket(HeadBucketRequest headBucketRequest) throws AmazonClientException, AmazonServiceException {
         return delegate.headBucket(headBucketRequest);
     }
-
-    @Override
-    public void shutdown() {
-        delegate.shutdown();
-    }
 }

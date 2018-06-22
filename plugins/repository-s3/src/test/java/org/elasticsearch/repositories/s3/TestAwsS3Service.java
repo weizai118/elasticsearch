@@ -22,39 +22,45 @@ package org.elasticsearch.repositories.s3;
 import java.util.IdentityHashMap;
 
 import com.amazonaws.services.s3.AmazonS3;
+import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.common.settings.Settings;
 
 public class TestAwsS3Service extends InternalAwsS3Service {
     public static class TestPlugin extends S3RepositoryPlugin {
         public TestPlugin(Settings settings) {
-            super(new TestAwsS3Service(settings));
+            super(settings);
+        }
+        @Override
+        protected AwsS3Service createStorageService(Settings settings) {
+            return new TestAwsS3Service(settings);
         }
     }
 
-    IdentityHashMap<AmazonS3Reference, TestAmazonS3> clients = new IdentityHashMap<>();
+    IdentityHashMap<AmazonS3, TestAmazonS3> clients = new IdentityHashMap<>();
 
     public TestAwsS3Service(Settings settings) {
-        super(settings);
+        super(settings, S3ClientSettings.load(settings));
     }
 
     @Override
-    public synchronized AmazonS3Reference client(String clientName) {
-        return new AmazonS3Reference(cachedWrapper(super.client(clientName)));
+    public synchronized AmazonS3 client(Settings repositorySettings) {
+        return cachedWrapper(super.client(repositorySettings));
     }
 
-    private AmazonS3 cachedWrapper(AmazonS3Reference clientReference) {
-        TestAmazonS3 wrapper = clients.get(clientReference);
+    private AmazonS3 cachedWrapper(AmazonS3 client) {
+        TestAmazonS3 wrapper = clients.get(client);
         if (wrapper == null) {
-            wrapper = new TestAmazonS3(clientReference.client(), settings);
-            clients.put(clientReference, wrapper);
+            wrapper = new TestAmazonS3(client, settings);
+            clients.put(client, wrapper);
         }
         return wrapper;
     }
 
     @Override
-    protected synchronized void releaseCachedClients() {
-        super.releaseCachedClients();
+    protected synchronized void doClose() throws ElasticsearchException {
+        super.doClose();
         clients.clear();
     }
+
 
 }

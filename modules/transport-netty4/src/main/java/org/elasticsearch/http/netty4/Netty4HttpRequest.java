@@ -19,22 +19,17 @@
 
 package org.elasticsearch.http.netty4;
 
-import io.netty.handler.codec.http.DefaultFullHttpRequest;
-import io.netty.handler.codec.http.DefaultHttpHeaders;
+import io.netty.channel.Channel;
 import io.netty.handler.codec.http.FullHttpRequest;
-import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http.cookie.Cookie;
-import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
-import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
 import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.common.bytes.BytesReference;
-import org.elasticsearch.http.HttpRequest;
+import org.elasticsearch.common.xcontent.NamedXContentRegistry;
 import org.elasticsearch.rest.RestRequest;
-import org.elasticsearch.rest.RestStatus;
 import org.elasticsearch.transport.netty4.Netty4Utils;
 
+import java.net.SocketAddress;
 import java.util.AbstractMap;
 import java.util.Collection;
 import java.util.Collections;
@@ -43,16 +38,25 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-public class Netty4HttpRequest implements HttpRequest {
-    private final FullHttpRequest request;
-    private final BytesReference content;
-    private final HttpHeadersMap headers;
-    private final int sequence;
+public class Netty4HttpRequest extends RestRequest {
 
-    Netty4HttpRequest(FullHttpRequest request, int sequence) {
+    private final FullHttpRequest request;
+    private final Channel channel;
+    private final BytesReference content;
+
+    /**
+     * Construct a new request.
+     *
+     * @param xContentRegistry the content registry
+     * @param request          the underlying request
+     * @param channel          the channel for the request
+     * @throws BadParameterException      if the parameters can not be decoded
+     * @throws ContentTypeHeaderException if the Content-Type header can not be parsed
+     */
+    Netty4HttpRequest(NamedXContentRegistry xContentRegistry, FullHttpRequest request, Channel channel) {
+        super(xContentRegistry, request.uri(), new HttpHeadersMap(request.headers()));
         this.request = request;
-        headers = new HttpHeadersMap(request.headers());
-        this.sequence = sequence;
+        this.channel = channel;
         if (request.content().isReadable()) {
             this.content = Netty4Utils.toBytesReference(request.content());
         } else {
@@ -60,39 +64,71 @@ public class Netty4HttpRequest implements HttpRequest {
         }
     }
 
+    /**
+     * Construct a new request. In contrast to
+     * {@link Netty4HttpRequest#Netty4HttpRequest(NamedXContentRegistry, Map, String, FullHttpRequest, Channel)}, the URI is not decoded so
+     * this constructor will not throw a {@link BadParameterException}.
+     *
+     * @param xContentRegistry the content registry
+     * @param params           the parameters for the request
+     * @param uri              the path for the request
+     * @param request          the underlying request
+     * @param channel          the channel for the request
+     * @throws ContentTypeHeaderException if the Content-Type header can not be parsed
+     */
+    Netty4HttpRequest(
+            final NamedXContentRegistry xContentRegistry,
+            final Map<String, String> params,
+            final String uri,
+            final FullHttpRequest request,
+            final Channel channel) {
+        super(xContentRegistry, params, uri, new HttpHeadersMap(request.headers()));
+        this.request = request;
+        this.channel = channel;
+        if (request.content().isReadable()) {
+            this.content = Netty4Utils.toBytesReference(request.content());
+        } else {
+            this.content = BytesArray.EMPTY;
+        }
+    }
+
+    public FullHttpRequest request() {
+        return this.request;
+    }
+
     @Override
-    public RestRequest.Method method() {
+    public Method method() {
         HttpMethod httpMethod = request.method();
         if (httpMethod == HttpMethod.GET)
-            return RestRequest.Method.GET;
+            return Method.GET;
 
         if (httpMethod == HttpMethod.POST)
-            return RestRequest.Method.POST;
+            return Method.POST;
 
         if (httpMethod == HttpMethod.PUT)
-            return RestRequest.Method.PUT;
+            return Method.PUT;
 
         if (httpMethod == HttpMethod.DELETE)
-            return RestRequest.Method.DELETE;
+            return Method.DELETE;
 
         if (httpMethod == HttpMethod.HEAD) {
-            return RestRequest.Method.HEAD;
+            return Method.HEAD;
         }
 
         if (httpMethod == HttpMethod.OPTIONS) {
-            return RestRequest.Method.OPTIONS;
+            return Method.OPTIONS;
         }
 
         if (httpMethod == HttpMethod.PATCH) {
-            return RestRequest.Method.PATCH;
+            return Method.PATCH;
         }
 
         if (httpMethod == HttpMethod.TRACE) {
-            return RestRequest.Method.TRACE;
+            return Method.TRACE;
         }
 
         if (httpMethod == HttpMethod.CONNECT) {
-            return RestRequest.Method.CONNECT;
+            return Method.CONNECT;
         }
 
         throw new IllegalArgumentException("Unexpected http method: " + httpMethod);
@@ -104,63 +140,39 @@ public class Netty4HttpRequest implements HttpRequest {
     }
 
     @Override
+    public boolean hasContent() {
+        return content.length() > 0;
+    }
+
+    @Override
     public BytesReference content() {
         return content;
     }
 
-
+    /**
+     * Returns the remote address where this rest request channel is "connected to".  The
+     * returned {@link SocketAddress} is supposed to be down-cast into more
+     * concrete type such as {@link java.net.InetSocketAddress} to retrieve
+     * the detailed information.
+     */
     @Override
-    public final Map<String, List<String>> getHeaders() {
-        return headers;
+    public SocketAddress getRemoteAddress() {
+        return channel.remoteAddress();
     }
 
+    /**
+     * Returns the local address where this request channel is bound to.  The returned
+     * {@link SocketAddress} is supposed to be down-cast into more concrete
+     * type such as {@link java.net.InetSocketAddress} to retrieve the detailed
+     * information.
+     */
     @Override
-    public List<String> strictCookies() {
-        String cookieString = request.headers().get(HttpHeaderNames.COOKIE);
-        if (cookieString != null) {
-            Set<Cookie> cookies = ServerCookieDecoder.STRICT.decode(cookieString);
-            if (!cookies.isEmpty()) {
-                return ServerCookieEncoder.STRICT.encode(cookies);
-            }
-        }
-        return Collections.emptyList();
+    public SocketAddress getLocalAddress() {
+        return channel.localAddress();
     }
 
-    @Override
-    public HttpVersion protocolVersion() {
-        if (request.protocolVersion().equals(io.netty.handler.codec.http.HttpVersion.HTTP_1_0)) {
-            return HttpRequest.HttpVersion.HTTP_1_0;
-        } else if (request.protocolVersion().equals(io.netty.handler.codec.http.HttpVersion.HTTP_1_1)) {
-            return HttpRequest.HttpVersion.HTTP_1_1;
-        } else {
-            throw new IllegalArgumentException("Unexpected http protocol version: " + request.protocolVersion());
-        }
-    }
-
-    @Override
-    public HttpRequest removeHeader(String header) {
-        HttpHeaders headersWithoutContentTypeHeader = new DefaultHttpHeaders();
-        headersWithoutContentTypeHeader.add(request.headers());
-        headersWithoutContentTypeHeader.remove(header);
-        HttpHeaders trailingHeaders = new DefaultHttpHeaders();
-        trailingHeaders.add(request.trailingHeaders());
-        trailingHeaders.remove(header);
-        FullHttpRequest requestWithoutHeader = new DefaultFullHttpRequest(request.protocolVersion(), request.method(), request.uri(),
-            request.content(), headersWithoutContentTypeHeader, trailingHeaders);
-        return new Netty4HttpRequest(requestWithoutHeader, sequence);
-    }
-
-    @Override
-    public Netty4HttpResponse createResponse(RestStatus status, BytesReference content) {
-        return new Netty4HttpResponse(this, status, content);
-    }
-
-    public FullHttpRequest nettyRequest() {
-        return request;
-    }
-
-    int sequence() {
-        return sequence;
+    public Channel getChannel() {
+        return channel;
     }
 
     /**
@@ -237,7 +249,7 @@ public class Netty4HttpRequest implements HttpRequest {
         @Override
         public Set<Entry<String, List<String>>> entrySet() {
             return httpHeaders.names().stream().map(k -> new AbstractMap.SimpleImmutableEntry<>(k, httpHeaders.getAll(k)))
-                .collect(Collectors.toSet());
+                    .collect(Collectors.toSet());
         }
     }
 }

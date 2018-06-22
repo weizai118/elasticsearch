@@ -138,10 +138,6 @@ public final class RandomCreateIndexGenerator {
             alias.filter("{\"term\":{\"year\":2016}}");
         }
 
-        if (randomBoolean()) {
-            alias.writeIndex(randomBoolean());
-        }
-
         return alias;
     }
 }

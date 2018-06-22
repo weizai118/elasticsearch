@@ -7,16 +7,16 @@ package org.elasticsearch.xpack.security.transport.netty4;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.ssl.SslHandler;
 import org.apache.logging.log4j.message.ParameterizedMessage;
-import org.elasticsearch.common.network.CloseableChannel;
 import org.elasticsearch.common.network.NetworkService;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.util.BigArrays;
 import org.elasticsearch.common.xcontent.NamedXContentRegistry;
-import org.elasticsearch.http.HttpChannel;
 import org.elasticsearch.http.netty4.Netty4HttpServerTransport;
 import org.elasticsearch.threadpool.ThreadPool;
+import org.elasticsearch.transport.netty4.Netty4Utils;
 import org.elasticsearch.xpack.core.ssl.SSLConfiguration;
 import org.elasticsearch.xpack.core.ssl.SSLService;
 import org.elasticsearch.xpack.security.transport.filter.IPFilter;
@@ -57,36 +57,37 @@ public class SecurityNetty4HttpServerTransport extends Netty4HttpServerTransport
     }
 
     @Override
-    protected void onException(HttpChannel channel, Exception e) {
+    protected void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        Netty4Utils.maybeDie(cause);
         if (!lifecycle.started()) {
             return;
         }
 
-        if (isNotSslRecordException(e)) {
+        if (isNotSslRecordException(cause)) {
             if (logger.isTraceEnabled()) {
                 logger.trace(new ParameterizedMessage("received plaintext http traffic on a https channel, closing connection {}",
-                    channel), e);
+                                ctx.channel()), cause);
             } else {
-                logger.warn("received plaintext http traffic on a https channel, closing connection {}", channel);
+                logger.warn("received plaintext http traffic on a https channel, closing connection {}", ctx.channel());
             }
-            CloseableChannel.closeChannel(channel);
-        } else if (isCloseDuringHandshakeException(e)) {
+            ctx.channel().close();
+        } else if (isCloseDuringHandshakeException(cause)) {
             if (logger.isTraceEnabled()) {
-                logger.trace(new ParameterizedMessage("connection {} closed during ssl handshake", channel), e);
+                logger.trace(new ParameterizedMessage("connection {} closed during ssl handshake", ctx.channel()), cause);
             } else {
-                logger.warn("connection {} closed during ssl handshake", channel);
+                logger.warn("connection {} closed during ssl handshake", ctx.channel());
             }
-            CloseableChannel.closeChannel(channel);
-        } else if (isReceivedCertificateUnknownException(e)) {
+            ctx.channel().close();
+        } else if (isReceivedCertificateUnknownException(cause)) {
             if (logger.isTraceEnabled()) {
                 logger.trace(new ParameterizedMessage("http client did not trust server's certificate, closing connection {}",
-                    channel), e);
+                                ctx.channel()), cause);
             } else {
-                logger.warn("http client did not trust this server's certificate, closing connection {}", channel);
+                logger.warn("http client did not trust this server's certificate, closing connection {}", ctx.channel());
             }
-            CloseableChannel.closeChannel(channel);
+            ctx.channel().close();
         } else {
-            super.onException(channel, e);
+            super.exceptionCaught(ctx, cause);
         }
     }
 
@@ -103,7 +104,7 @@ public class SecurityNetty4HttpServerTransport extends Netty4HttpServerTransport
 
     private final class HttpSslChannelHandler extends HttpChannelHandler {
         HttpSslChannelHandler() {
-            super(SecurityNetty4HttpServerTransport.this, handlingSettings);
+            super(SecurityNetty4HttpServerTransport.this, httpHandlingSettings, threadPool.getThreadContext());
         }
 
         @Override

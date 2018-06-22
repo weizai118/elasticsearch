@@ -33,12 +33,14 @@ import java.net.ConnectException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import static java.util.Collections.singletonList;
 import static org.elasticsearch.client.RestClientTestUtil.getAllStatusCodes;
 import static org.elasticsearch.client.RestClientTestUtil.randomErrorNoRetryStatusCode;
 import static org.elasticsearch.client.RestClientTestUtil.randomOkStatusCode;
@@ -214,10 +216,7 @@ public class RestClientMultipleHostsIntegTests extends RestClientTestCase {
                     restClient.performRequest(request);
                     fail("expected to fail to connect");
                 } catch (ConnectException e) {
-                    // Windows isn't consistent here. Sometimes the message is even null!
-                    if (false == System.getProperty("os.name").startsWith("Windows")) {
-                        assertEquals("Connection refused", e.getMessage());
-                    }
+                    assertEquals("Connection refused", e.getMessage());
                 }
             } else {
                 Response response = restClient.performRequest(request);

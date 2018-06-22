@@ -12,6 +12,7 @@ import org.elasticsearch.action.get.GetRequest;
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.action.support.ActionFilters;
 import org.elasticsearch.client.Client;
+import org.elasticsearch.cluster.metadata.IndexNameExpressionResolver;
 import org.elasticsearch.cluster.routing.Preference;
 import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.inject.Inject;
@@ -57,7 +58,6 @@ import static org.joda.time.DateTimeZone.UTC;
  */
 public class TransportExecuteWatchAction extends WatcherTransportAction<ExecuteWatchRequest, ExecuteWatchResponse> {
 
-    private final ThreadPool threadPool;
     private final ExecutionService executionService;
     private final Clock clock;
     private final TriggerService triggerService;
@@ -66,11 +66,11 @@ public class TransportExecuteWatchAction extends WatcherTransportAction<ExecuteW
 
     @Inject
     public TransportExecuteWatchAction(Settings settings, TransportService transportService, ThreadPool threadPool,
-                                       ActionFilters actionFilters, ExecutionService executionService, Clock clock,
-                                       XPackLicenseState licenseState, WatchParser watchParser, Client client,
-                                       TriggerService triggerService) {
-        super(settings, ExecuteWatchAction.NAME, transportService, actionFilters, licenseState, ExecuteWatchRequest::new);
-        this.threadPool = threadPool;
+                                       ActionFilters actionFilters, IndexNameExpressionResolver indexNameExpressionResolver,
+                                       ExecutionService executionService, Clock clock, XPackLicenseState licenseState,
+                                       WatchParser watchParser, Client client, TriggerService triggerService) {
+        super(settings, ExecuteWatchAction.NAME, transportService, threadPool, actionFilters, indexNameExpressionResolver,
+                licenseState, ExecuteWatchRequest::new);
         this.executionService = executionService;
         this.clock = clock;
         this.triggerService = triggerService;

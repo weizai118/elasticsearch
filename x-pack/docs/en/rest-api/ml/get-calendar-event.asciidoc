@@ -5,7 +5,7 @@
 <titleabbrev>Get Scheduled Events</titleabbrev>
 ++++
 
-Retrieves information about the scheduled events in
+This API enables you to retrieve information about the scheduled events in
 calendars.
 
 

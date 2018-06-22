@@ -10,6 +10,7 @@ import org.elasticsearch.action.ActionRunnable;
 import org.elasticsearch.action.support.ActionFilters;
 import org.elasticsearch.action.support.HandledTransportAction;
 import org.elasticsearch.cluster.block.ClusterBlockLevel;
+import org.elasticsearch.cluster.metadata.IndexNameExpressionResolver;
 import org.elasticsearch.cluster.node.DiscoveryNode;
 import org.elasticsearch.cluster.service.ClusterService;
 import org.elasticsearch.common.bytes.BytesReference;
@@ -34,17 +35,17 @@ import java.util.stream.Collectors;
 
 public class TransportMonitoringBulkAction extends HandledTransportAction<MonitoringBulkRequest, MonitoringBulkResponse> {
 
-    private final ThreadPool threadPool;
     private final ClusterService clusterService;
     private final Exporters exportService;
     private final MonitoringService monitoringService;
 
     @Inject
     public TransportMonitoringBulkAction(Settings settings, ThreadPool threadPool, ClusterService clusterService,
-                                         TransportService transportService, ActionFilters actionFilters, Exporters exportService,
+                                         TransportService transportService, ActionFilters actionFilters,
+                                         IndexNameExpressionResolver indexNameExpressionResolver, Exporters exportService,
                                          MonitoringService monitoringService) {
-        super(settings, MonitoringBulkAction.NAME, transportService, actionFilters, MonitoringBulkRequest::new);
-        this.threadPool = threadPool;
+        super(settings, MonitoringBulkAction.NAME, threadPool, transportService, actionFilters, indexNameExpressionResolver,
+                MonitoringBulkRequest::new);
         this.clusterService = clusterService;
         this.exportService = exportService;
         this.monitoringService = monitoringService;

@@ -29,7 +29,6 @@ import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.util.EntityUtils;
 import org.elasticsearch.action.ActionRequestValidationException;
 import org.elasticsearch.action.DocWriteRequest;
-import org.elasticsearch.action.admin.cluster.health.ClusterHealthRequest;
 import org.elasticsearch.action.admin.cluster.node.tasks.cancel.CancelTasksRequest;
 import org.elasticsearch.action.admin.cluster.node.tasks.list.ListTasksRequest;
 import org.elasticsearch.action.admin.cluster.repositories.delete.DeleteRepositoryRequest;
@@ -37,9 +36,6 @@ import org.elasticsearch.action.admin.cluster.repositories.get.GetRepositoriesRe
 import org.elasticsearch.action.admin.cluster.repositories.put.PutRepositoryRequest;
 import org.elasticsearch.action.admin.cluster.repositories.verify.VerifyRepositoryRequest;
 import org.elasticsearch.action.admin.cluster.settings.ClusterUpdateSettingsRequest;
-import org.elasticsearch.action.admin.cluster.snapshots.delete.DeleteSnapshotRequest;
-import org.elasticsearch.action.admin.cluster.storedscripts.DeleteStoredScriptRequest;
-import org.elasticsearch.action.admin.cluster.storedscripts.GetStoredScriptRequest;
 import org.elasticsearch.action.admin.indices.alias.Alias;
 import org.elasticsearch.action.admin.indices.alias.IndicesAliasesRequest;
 import org.elasticsearch.action.admin.indices.alias.IndicesAliasesRequest.AliasActions;
@@ -63,7 +59,6 @@ import org.elasticsearch.action.admin.indices.shrink.ResizeRequest;
 import org.elasticsearch.action.admin.indices.shrink.ResizeType;
 import org.elasticsearch.action.admin.indices.template.get.GetIndexTemplatesRequest;
 import org.elasticsearch.action.admin.indices.template.put.PutIndexTemplateRequest;
-import org.elasticsearch.action.admin.indices.validate.query.ValidateQueryRequest;
 import org.elasticsearch.action.bulk.BulkRequest;
 import org.elasticsearch.action.bulk.BulkShardRequest;
 import org.elasticsearch.action.delete.DeleteRequest;
@@ -88,10 +83,8 @@ import org.elasticsearch.action.support.master.MasterNodeRequest;
 import org.elasticsearch.action.support.replication.ReplicationRequest;
 import org.elasticsearch.action.update.UpdateRequest;
 import org.elasticsearch.client.RequestConverters.EndpointBuilder;
-import org.elasticsearch.cluster.health.ClusterHealthStatus;
 import org.elasticsearch.common.CheckedBiConsumer;
 import org.elasticsearch.common.CheckedFunction;
-import org.elasticsearch.common.Priority;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.common.bytes.BytesReference;
@@ -101,7 +94,6 @@ import org.elasticsearch.common.lucene.uid.Versions;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.unit.ByteSizeUnit;
 import org.elasticsearch.common.unit.TimeValue;
-import org.elasticsearch.common.util.CollectionUtils;
 import org.elasticsearch.common.xcontent.ToXContent;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentHelper;
@@ -132,7 +124,6 @@ import org.elasticsearch.search.suggest.completion.CompletionSuggestionBuilder;
 import org.elasticsearch.tasks.TaskId;
 import org.elasticsearch.test.ESTestCase;
 import org.elasticsearch.test.RandomObjects;
-import org.hamcrest.CoreMatchers;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -1534,85 +1525,6 @@ public class RequestConvertersTests extends ESTestCase {
         assertEquals(expectedParams, expectedRequest.getParameters());
     }
 
-    public void testClusterHealth() {
-        ClusterHealthRequest healthRequest = new ClusterHealthRequest();
-        Map<String, String> expectedParams = new HashMap<>();
-        setRandomLocal(healthRequest, expectedParams);
-        String timeoutType = randomFrom("timeout", "masterTimeout", "both", "none");
-        String timeout = randomTimeValue();
-        String masterTimeout = randomTimeValue();
-        switch (timeoutType) {
-            case "timeout":
-                healthRequest.timeout(timeout);
-                expectedParams.put("timeout", timeout);
-                // If Master Timeout wasn't set it uses the same value as Timeout
-                expectedParams.put("master_timeout", timeout);
-                break;
-            case "masterTimeout":
-                expectedParams.put("timeout", "30s");
-                healthRequest.masterNodeTimeout(masterTimeout);
-                expectedParams.put("master_timeout", masterTimeout);
-                break;
-            case "both":
-                healthRequest.timeout(timeout);
-                expectedParams.put("timeout", timeout);
-                healthRequest.masterNodeTimeout(timeout);
-                expectedParams.put("master_timeout", timeout);
-                break;
-            case "none":
-                expectedParams.put("timeout", "30s");
-                expectedParams.put("master_timeout", "30s");
-                break;
-            default:
-                throw new UnsupportedOperationException();
-        }
-        setRandomWaitForActiveShards(healthRequest::waitForActiveShards, ActiveShardCount.NONE, expectedParams);
-        if (randomBoolean()) {
-            ClusterHealthRequest.Level level = randomFrom(ClusterHealthRequest.Level.values());
-            healthRequest.level(level);
-            expectedParams.put("level", level.name().toLowerCase(Locale.ROOT));
-        } else {
-            expectedParams.put("level", "cluster");
-        }
-        if (randomBoolean()) {
-            Priority priority = randomFrom(Priority.values());
-            healthRequest.waitForEvents(priority);
-            expectedParams.put("wait_for_events", priority.name().toLowerCase(Locale.ROOT));
-        }
-        if (randomBoolean()) {
-            ClusterHealthStatus status = randomFrom(ClusterHealthStatus.values());
-            healthRequest.waitForStatus(status);
-            expectedParams.put("wait_for_status", status.name().toLowerCase(Locale.ROOT));
-        }
-        if (randomBoolean()) {
-            boolean waitForNoInitializingShards = randomBoolean();
-            healthRequest.waitForNoInitializingShards(waitForNoInitializingShards);
-            if (waitForNoInitializingShards) {
-                expectedParams.put("wait_for_no_initializing_shards", Boolean.TRUE.toString());
-            }
-        }
-        if (randomBoolean()) {
-            boolean waitForNoRelocatingShards = randomBoolean();
-            healthRequest.waitForNoRelocatingShards(waitForNoRelocatingShards);
-            if (waitForNoRelocatingShards) {
-                expectedParams.put("wait_for_no_relocating_shards", Boolean.TRUE.toString());
-            }
-        }
-        String[] indices = randomBoolean() ? null : randomIndicesNames(0, 5);
-        healthRequest.indices(indices);
-
-        Request request = RequestConverters.clusterHealth(healthRequest);
-        assertThat(request, CoreMatchers.notNullValue());
-        assertThat(request.getMethod(), equalTo(HttpGet.METHOD_NAME));
-        assertThat(request.getEntity(), nullValue());
-        if (indices != null && indices.length > 0) {
-            assertThat(request.getEndpoint(), equalTo("/_cluster/health/" + String.join(",", indices)));
-        } else {
-            assertThat(request.getEndpoint(), equalTo("/_cluster/health"));
-        }
-        assertThat(request.getParameters(), equalTo(expectedParams));
-    }
-
     public void testRollover() throws IOException {
         RolloverRequest rolloverRequest = new RolloverRequest(randomAlphaOfLengthBetween(3, 10),
                 randomBoolean() ? null : randomAlphaOfLengthBetween(3, 10));
@@ -1649,36 +1561,6 @@ public class RequestConvertersTests extends ESTestCase {
         assertEquals(HttpPost.METHOD_NAME, request.getMethod());
         assertToXContentBody(rolloverRequest, request.getEntity());
         assertEquals(expectedParams, request.getParameters());
-    }
-
-    public void testGetAlias() {
-        GetAliasesRequest getAliasesRequest = new GetAliasesRequest();
-
-        Map<String, String> expectedParams = new HashMap<>();
-        setRandomLocal(getAliasesRequest, expectedParams);
-        setRandomIndicesOptions(getAliasesRequest::indicesOptions, getAliasesRequest::indicesOptions, expectedParams);
-
-        String[] indices = randomBoolean() ? null : randomIndicesNames(0, 2);
-        String[] aliases = randomBoolean() ? null : randomIndicesNames(0, 2);
-        getAliasesRequest.indices(indices);
-        getAliasesRequest.aliases(aliases);
-
-        Request request = RequestConverters.getAlias(getAliasesRequest);
-        StringJoiner expectedEndpoint = new StringJoiner("/", "/", "");
-
-        if (false == CollectionUtils.isEmpty(indices)) {
-            expectedEndpoint.add(String.join(",", indices));
-        }
-        expectedEndpoint.add("_alias");
-
-        if (false == CollectionUtils.isEmpty(aliases)) {
-            expectedEndpoint.add(String.join(",", aliases));
-        }
-
-        assertEquals(HttpGet.METHOD_NAME, request.getMethod());
-        assertEquals(expectedEndpoint.toString(), request.getEndpoint());
-        assertEquals(expectedParams, request.getParameters());
-        assertNull(request.getEntity());
     }
 
     public void testIndexPutSettings() throws IOException {
@@ -1858,25 +1740,6 @@ public class RequestConvertersTests extends ESTestCase {
         assertThat(expectedParams, equalTo(request.getParameters()));
     }
 
-    public void testDeleteSnapshot() {
-        Map<String, String> expectedParams = new HashMap<>();
-        String repository = randomIndicesNames(1, 1)[0];
-        String snapshot = "snapshot-" + randomAlphaOfLengthBetween(2, 5).toLowerCase(Locale.ROOT);
-
-        String endpoint = String.format(Locale.ROOT, "/_snapshot/%s/%s", repository, snapshot);
-
-        DeleteSnapshotRequest deleteSnapshotRequest = new DeleteSnapshotRequest();
-        deleteSnapshotRequest.repository(repository);
-        deleteSnapshotRequest.snapshot(snapshot);
-        setRandomMasterTimeout(deleteSnapshotRequest, expectedParams);
-
-        Request request = RequestConverters.deleteSnapshot(deleteSnapshotRequest);
-        assertThat(endpoint, equalTo(request.getEndpoint()));
-        assertThat(HttpDelete.METHOD_NAME, equalTo(request.getMethod()));
-        assertThat(expectedParams, equalTo(request.getParameters()));
-        assertNull(request.getEntity());
-    }
-
     public void testPutTemplateRequest() throws Exception {
         Map<String, String> names = new HashMap<>();
         names.put("log", "log");
@@ -1918,40 +1781,6 @@ public class RequestConvertersTests extends ESTestCase {
         assertToXContentBody(putTemplateRequest, request.getEntity());
     }
 
-    public void testValidateQuery() throws Exception {
-        String[] indices = randomBoolean() ? null : randomIndicesNames(0, 5);
-        String[] types = randomBoolean() ? generateRandomStringArray(5, 5, false, false) : null;
-        ValidateQueryRequest validateQueryRequest;
-        if (randomBoolean()) {
-            validateQueryRequest = new ValidateQueryRequest(indices);
-        } else {
-            validateQueryRequest = new ValidateQueryRequest();
-            validateQueryRequest.indices(indices);
-        }
-        validateQueryRequest.types(types);
-        Map<String, String> expectedParams = new HashMap<>();
-        setRandomIndicesOptions(validateQueryRequest::indicesOptions, validateQueryRequest::indicesOptions, expectedParams);
-        validateQueryRequest.explain(randomBoolean());
-        validateQueryRequest.rewrite(randomBoolean());
-        validateQueryRequest.allShards(randomBoolean());
-        expectedParams.put("explain", Boolean.toString(validateQueryRequest.explain()));
-        expectedParams.put("rewrite", Boolean.toString(validateQueryRequest.rewrite()));
-        expectedParams.put("all_shards", Boolean.toString(validateQueryRequest.allShards()));
-        Request request = RequestConverters.validateQuery(validateQueryRequest);
-        StringJoiner endpoint = new StringJoiner("/", "/", "");
-        if (indices != null && indices.length > 0) {
-            endpoint.add(String.join(",", indices));
-            if (types != null && types.length > 0) {
-                endpoint.add(String.join(",", types));
-            }
-        }
-        endpoint.add("_validate/query");
-        assertThat(request.getEndpoint(), equalTo(endpoint.toString()));
-        assertThat(request.getParameters(), equalTo(expectedParams));
-        assertToXContentBody(validateQueryRequest, request.getEntity());
-        assertThat(request.getMethod(), equalTo(HttpGet.METHOD_NAME));
-    }
-
     public void testGetTemplateRequest() throws Exception {
         Map<String, String> encodes = new HashMap<>();
         encodes.put("log", "log");
@@ -1966,32 +1795,6 @@ public class RequestConvertersTests extends ESTestCase {
         setRandomLocal(getTemplatesRequest, expectedParams);
         Request request = RequestConverters.getTemplates(getTemplatesRequest);
         assertThat(request.getEndpoint(), equalTo("/_template/" + names.stream().map(encodes::get).collect(Collectors.joining(","))));
-        assertThat(request.getParameters(), equalTo(expectedParams));
-        assertThat(request.getEntity(), nullValue());
-    }
-
-    public void testGetScriptRequest() {
-        GetStoredScriptRequest getStoredScriptRequest = new GetStoredScriptRequest("x-script");
-        Map<String, String> expectedParams = new HashMap<>();
-        setRandomMasterTimeout(getStoredScriptRequest, expectedParams);
-
-        Request request = RequestConverters.getScript(getStoredScriptRequest);
-        assertThat(request.getEndpoint(), equalTo("/_scripts/" + getStoredScriptRequest.id()));
-        assertThat(request.getMethod(), equalTo(HttpGet.METHOD_NAME));
-        assertThat(request.getParameters(), equalTo(expectedParams));
-        assertThat(request.getEntity(), nullValue());
-    }
-
-    public void testDeleteScriptRequest() {
-        DeleteStoredScriptRequest deleteStoredScriptRequest = new DeleteStoredScriptRequest("x-script");
-
-        Map<String, String> expectedParams = new HashMap<>();
-        setRandomTimeout(deleteStoredScriptRequest::timeout, AcknowledgedRequest.DEFAULT_ACK_TIMEOUT, expectedParams);
-        setRandomMasterTimeout(deleteStoredScriptRequest, expectedParams);
-
-        Request request = RequestConverters.deleteScript(deleteStoredScriptRequest);
-        assertThat(request.getEndpoint(), equalTo("/_scripts/" + deleteStoredScriptRequest.id()));
-        assertThat(request.getMethod(), equalTo(HttpDelete.METHOD_NAME));
         assertThat(request.getParameters(), equalTo(expectedParams));
         assertThat(request.getEntity(), nullValue());
     }
@@ -2270,24 +2073,16 @@ public class RequestConvertersTests extends ESTestCase {
     }
 
     private static void setRandomWaitForActiveShards(Consumer<ActiveShardCount> setter, Map<String, String> expectedParams) {
-        setRandomWaitForActiveShards(setter, ActiveShardCount.DEFAULT, expectedParams);
-    }
-
-    private static void setRandomWaitForActiveShards(Consumer<ActiveShardCount> setter, ActiveShardCount defaultActiveShardCount,
-                                                     Map<String, String> expectedParams) {
         if (randomBoolean()) {
-            int waitForActiveShardsInt = randomIntBetween(-1, 5);
             String waitForActiveShardsString;
-            if (waitForActiveShardsInt == -1) {
+            int waitForActiveShards = randomIntBetween(-1, 5);
+            if (waitForActiveShards == -1) {
                 waitForActiveShardsString = "all";
             } else {
-                waitForActiveShardsString = String.valueOf(waitForActiveShardsInt);
+                waitForActiveShardsString = String.valueOf(waitForActiveShards);
             }
-            ActiveShardCount activeShardCount = ActiveShardCount.parseString(waitForActiveShardsString);
-            setter.accept(activeShardCount);
-            if (defaultActiveShardCount.equals(activeShardCount) == false) {
-                expectedParams.put("wait_for_active_shards", waitForActiveShardsString);
-            }
+            setter.accept(ActiveShardCount.parseString(waitForActiveShardsString));
+            expectedParams.put("wait_for_active_shards", waitForActiveShardsString);
         }
     }
 

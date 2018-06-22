@@ -22,7 +22,7 @@ setup:
         filter_id: filter-foo
         body:  >
           {
-            "items": ["xyz", "abc"]
+            "items": ["abc", "xyz"]
           }
 
   - do:
@@ -32,7 +32,6 @@ setup:
         filter_id: filter-foo2
         body:  >
           {
-            "description": "This filter has a description",
             "items": ["123", "lmnop"]
           }
 
@@ -77,7 +76,6 @@ setup:
   - match:
       filters.1:
         filter_id: "filter-foo2"
-        description: "This filter has a description"
         items: ["123", "lmnop"]
 
   - do:
@@ -115,13 +113,10 @@ setup:
         filter_id: filter-foo2
         body:  >
           {
-            "description": "A newly created filter",
             "items": ["abc", "xyz"]
           }
 
-  - match: { filter_id: filter-foo2 }
-  - match: { description: "A newly created filter" }
-  - match: { items: ["abc", "xyz"]}
+  - match: { acknowledged: true }
 
   - do:
       xpack.ml.get_filters:
@@ -131,7 +126,6 @@ setup:
   - match:
       filters.0:
         filter_id: "filter-foo2"
-        description: "A newly created filter"
         items: ["abc", "xyz"]
 
 ---
@@ -158,11 +152,15 @@ setup:
             "analysis_config" : {
                 "bucket_span": "3600s",
                 "detectors" :[{"function":"mean","field_name":"responsetime", "by_field_name": "airline",
-                  "custom_rules": [
+                  "rules": [
                     {
-                      "scope": {
-                        "airline": {"filter_id": "filter-foo"}
-                      }
+                      "conditions": [
+                        {
+                          "type": "categorical",
+                          "field_name": "airline",
+                          "filter_id": "filter-foo"
+                        }
+                      ]
                     }
                   ]}]
             },

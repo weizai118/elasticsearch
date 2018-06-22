@@ -408,18 +408,19 @@ public class UnicastZenPingTests extends ESTestCase {
                 Collections.emptySet());
         closeables.push(transportService);
         final int limitPortCounts = randomIntBetween(1, 10);
-        final List<TransportAddress> transportAddresses = TestUnicastZenPing.resolveHostsLists(
+        final List<DiscoveryNode> discoveryNodes = TestUnicastZenPing.resolveHostsLists(
             executorService,
             logger,
             Collections.singletonList("127.0.0.1"),
             limitPortCounts,
             transportService,
+            "test_",
             TimeValue.timeValueSeconds(1));
-        assertThat(transportAddresses, hasSize(limitPortCounts));
+        assertThat(discoveryNodes, hasSize(limitPortCounts));
         final Set<Integer> ports = new HashSet<>();
-        for (final TransportAddress address : transportAddresses) {
-            assertTrue(address.address().getAddress().isLoopbackAddress());
-            ports.add(address.getPort());
+        for (final DiscoveryNode discoveryNode : discoveryNodes) {
+            assertTrue(discoveryNode.getAddress().address().getAddress().isLoopbackAddress());
+            ports.add(discoveryNode.getAddress().getPort());
         }
         assertThat(ports, equalTo(IntStream.range(9300, 9300 + limitPortCounts).mapToObj(m -> m).collect(Collectors.toSet())));
     }
@@ -452,18 +453,19 @@ public class UnicastZenPingTests extends ESTestCase {
             new TransportService(Settings.EMPTY, transport, threadPool, TransportService.NOOP_TRANSPORT_INTERCEPTOR, x -> null, null,
                 Collections.emptySet());
         closeables.push(transportService);
-        final List<TransportAddress> transportAddresses = TestUnicastZenPing.resolveHostsLists(
+        final List<DiscoveryNode> discoveryNodes = TestUnicastZenPing.resolveHostsLists(
             executorService,
             logger,
             Collections.singletonList(NetworkAddress.format(loopbackAddress)),
             10,
             transportService,
+            "test_",
             TimeValue.timeValueSeconds(1));
-        assertThat(transportAddresses, hasSize(7));
+        assertThat(discoveryNodes, hasSize(7));
         final Set<Integer> ports = new HashSet<>();
-        for (final TransportAddress address : transportAddresses) {
-            assertTrue(address.address().getAddress().isLoopbackAddress());
-            ports.add(address.getPort());
+        for (final DiscoveryNode discoveryNode : discoveryNodes) {
+            assertTrue(discoveryNode.getAddress().address().getAddress().isLoopbackAddress());
+            ports.add(discoveryNode.getAddress().getPort());
         }
         assertThat(ports, equalTo(IntStream.range(9303, 9310).mapToObj(m -> m).collect(Collectors.toSet())));
     }
@@ -503,16 +505,17 @@ public class UnicastZenPingTests extends ESTestCase {
                 Collections.emptySet());
         closeables.push(transportService);
 
-        final List<TransportAddress> transportAddresses = TestUnicastZenPing.resolveHostsLists(
+        final List<DiscoveryNode> discoveryNodes = TestUnicastZenPing.resolveHostsLists(
             executorService,
             logger,
             Arrays.asList(hostname),
             1,
             transportService,
+            "test_",
             TimeValue.timeValueSeconds(1)
         );
 
-        assertThat(transportAddresses, empty());
+        assertThat(discoveryNodes, empty());
         verify(logger).warn("failed to resolve host [" + hostname + "]", unknownHostException);
     }
 
@@ -562,15 +565,16 @@ public class UnicastZenPingTests extends ESTestCase {
         closeables.push(transportService);
         final TimeValue resolveTimeout = TimeValue.timeValueSeconds(randomIntBetween(1, 3));
         try {
-            final List<TransportAddress> transportAddresses = TestUnicastZenPing.resolveHostsLists(
+            final List<DiscoveryNode> discoveryNodes = TestUnicastZenPing.resolveHostsLists(
                 executorService,
                 logger,
                 Arrays.asList("hostname1", "hostname2"),
                 1,
                 transportService,
+                "test+",
                 resolveTimeout);
 
-            assertThat(transportAddresses, hasSize(1));
+            assertThat(discoveryNodes, hasSize(1));
             verify(logger).trace(
                 "resolved host [{}] to {}", "hostname1",
                 new TransportAddress[]{new TransportAddress(TransportAddress.META_ADDRESS, 9300)});
@@ -728,16 +732,17 @@ public class UnicastZenPingTests extends ESTestCase {
             new TransportService(Settings.EMPTY, transport, threadPool, TransportService.NOOP_TRANSPORT_INTERCEPTOR, x -> null, null,
                 Collections.emptySet());
         closeables.push(transportService);
-        final List<TransportAddress> transportAddresses = TestUnicastZenPing.resolveHostsLists(
+        final List<DiscoveryNode> discoveryNodes = TestUnicastZenPing.resolveHostsLists(
             executorService,
             logger,
             Arrays.asList("127.0.0.1:9300:9300", "127.0.0.1:9301"),
             1,
             transportService,
+            "test_",
             TimeValue.timeValueSeconds(1));
-        assertThat(transportAddresses, hasSize(1)); // only one of the two is valid and will be used
-        assertThat(transportAddresses.get(0).getAddress(), equalTo("127.0.0.1"));
-        assertThat(transportAddresses.get(0).getPort(), equalTo(9301));
+        assertThat(discoveryNodes, hasSize(1)); // only one of the two is valid and will be used
+        assertThat(discoveryNodes.get(0).getAddress().getAddress(), equalTo("127.0.0.1"));
+        assertThat(discoveryNodes.get(0).getAddress().getPort(), equalTo(9301));
         verify(logger).warn(eq("failed to resolve host [127.0.0.1:9300:9300]"), Matchers.any(ExecutionException.class));
     }
 

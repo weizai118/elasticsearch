@@ -27,6 +27,7 @@ import org.gradle.api.tasks.OutputDirectory
 
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.regex.Matcher
 
 /**
  * Generates REST tests for each snippet marked // TEST.
@@ -97,14 +98,6 @@ public class RestTestsFromSnippetsTask extends SnippetsTask {
          * and gce discovery plugins, the snippets should be marked
          * `// NOTCONSOLE`. */
         return snippet.language == 'js' || snippet.curl
-    }
-
-    /**
-     * Certain requests should not have the shard failure check because the
-     * format of the response is incompatible i.e. it is not a JSON object.
-     */
-    static shouldAddShardFailureCheck(String path) {
-        return path.startsWith('_cat') == false &&  path.startsWith('_xpack/ml/datafeeds/') == false
     }
 
     /**
@@ -316,11 +309,13 @@ public class RestTestsFromSnippetsTask extends SnippetsTask {
              * no shard succeeds. But we need to fail the tests on all of these
              * because they mean invalid syntax or broken queries or something
              * else that we don't want to teach people to do. The REST test
-             * framework doesn't allow us to have assertions in the setup
-             * section so we have to skip it there. We also omit the assertion
-             * from APIs that don't return a JSON object
+             * framework doesn't allow us to has assertions in the setup
+             * section so we have to skip it there. We also have to skip _cat
+             * actions because they don't return json so we can't is_false
+             * them. That is ok because they don't have this
+             * partial-success-is-success thing.
              */
-            if (false == inSetup && shouldAddShardFailureCheck(path)) {
+            if (false == inSetup && false == path.startsWith('_cat')) {
                 current.println("  - is_false: _shards.failures")
             }
         }

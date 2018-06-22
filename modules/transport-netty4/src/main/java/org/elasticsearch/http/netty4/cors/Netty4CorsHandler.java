@@ -22,7 +22,6 @@ package org.elasticsearch.http.netty4.cors;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
@@ -31,7 +30,6 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.elasticsearch.common.Strings;
-import org.elasticsearch.http.netty4.Netty4HttpResponse;
 
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -76,14 +74,6 @@ public class Netty4CorsHandler extends ChannelDuplexHandler {
             }
         }
         ctx.fireChannelRead(msg);
-    }
-
-    @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-        assert msg instanceof Netty4HttpResponse : "Invalid message type: " + msg.getClass();
-        Netty4HttpResponse response = (Netty4HttpResponse) msg;
-        setCorsResponseHeaders(response.getRequest().nettyRequest(), response, config);
-        ctx.write(response, promise);;
     }
 
     public static void setCorsResponseHeaders(HttpRequest request, HttpResponse resp, Netty4CorsConfig config) {

@@ -1,6 +1,5 @@
-[role="xpack"]
 [[ml-count-functions]]
-=== Count functions
+=== Count Functions
 
 Count functions detect anomalies when the number of events in a bucket is
 anomalous.
@@ -22,7 +21,7 @@ The {xpackml} features include the following count functions:
 
 [float]
 [[ml-count]]
-===== Count, high_count, low_count
+===== Count, High_count, Low_count
 
 The `count` function detects anomalies when the number of events in a bucket is
 anomalous.
@@ -45,20 +44,8 @@ see {ref}/ml-job-resource.html#ml-detectorconfig[Detector Configuration Objects]
 .Example 1: Analyzing events with the count function
 [source,js]
 --------------------------------------------------
-PUT _xpack/ml/anomaly_detectors/example1
-{
-  "analysis_config": {
-    "detectors": [{
-      "function" : "count"
-    }]
-  },
-  "data_description": {
-    "time_field":"timestamp",
-    "time_format": "epoch_ms"
-  }
-}
+{ "function" : "count" }
 --------------------------------------------------
-// CONSOLE
 
 This example is probably the simplest possible analysis. It identifies
 time buckets during which the overall count of events is higher or lower than
@@ -70,22 +57,12 @@ and detects when the event rate is unusual compared to its past behavior.
 .Example 2: Analyzing errors with the high_count function
 [source,js]
 --------------------------------------------------
-PUT _xpack/ml/anomaly_detectors/example2
 {
-  "analysis_config": {
-    "detectors": [{
-      "function" : "high_count",
-      "by_field_name" : "error_code",
-      "over_field_name": "user"
-    }]
-  },
-  "data_description": {
-    "time_field":"timestamp",
-    "time_format": "epoch_ms"
-  }
+  "function" : "high_count",
+  "by_field_name" : "error_code",
+  "over_field_name": "user"
 }
 --------------------------------------------------
-// CONSOLE
 
 If you use this `high_count` function in a detector in your job, it
 models the event rate for each error code. It detects users that generate an
@@ -95,21 +72,11 @@ unusually high count of error codes compared to other users.
 .Example 3: Analyzing status codes with the low_count function
 [source,js]
 --------------------------------------------------
-PUT _xpack/ml/anomaly_detectors/example3
 {
-  "analysis_config": {
-    "detectors": [{
-      "function" : "low_count",
-      "by_field_name" : "status_code"
-    }]
-  },
-  "data_description": {
-    "time_field":"timestamp",
-    "time_format": "epoch_ms"
-  }
+  "function" : "low_count",
+  "by_field_name" : "status_code"
 }
 --------------------------------------------------
-// CONSOLE
 
 In this example, the function detects when the count of events for a
 status code is lower than usual.
@@ -121,30 +88,22 @@ compared to its past behavior.
 .Example 4: Analyzing aggregated data with the count function
 [source,js]
 --------------------------------------------------
-PUT _xpack/ml/anomaly_detectors/example4
 {
-  "analysis_config": {
-    "summary_count_field_name" : "events_per_min",
-    "detectors": [{
-      "function" : "count"
-    }]
-  },
-  "data_description": {
-    "time_field":"timestamp",
-    "time_format": "epoch_ms"
-  }
-}  
+  "summary_count_field_name" : "events_per_min",
+  "detectors" [
+      { "function" : "count" }
+   ]
+}
 --------------------------------------------------
-// CONSOLE
 
 If you are analyzing an aggregated `events_per_min` field, do not use a sum
 function (for example, `sum(events_per_min)`). Instead, use the count function
-and the `summary_count_field_name` property. For more information, see 
-<<ml-configuring-aggregation>>.
+and the `summary_count_field_name` property.
+//TO-DO: For more information, see <<aggreggations.asciidoc>>.
 
 [float]
 [[ml-nonzero-count]]
-===== Non_zero_count, high_non_zero_count, low_non_zero_count
+===== Non_zero_count, High_non_zero_count, Low_non_zero_count
 
 The `non_zero_count` function detects anomalies when the number of events in a
 bucket is anomalous, but it ignores cases where the bucket count is zero. Use
@@ -185,21 +144,11 @@ The `non_zero_count` function models only the following data:
 .Example 5: Analyzing signatures with the high_non_zero_count function
 [source,js]
 --------------------------------------------------
-PUT _xpack/ml/anomaly_detectors/example5
 {
-  "analysis_config": {
-    "detectors": [{
-      "function" : "high_non_zero_count",
-      "by_field_name" : "signaturename"
-    }]
-  },
-  "data_description": {
-    "time_field":"timestamp",
-    "time_format": "epoch_ms"
-  }
+  "function" : "high_non_zero_count",
+  "by_field_name" : "signaturename"
 }
 --------------------------------------------------
-// CONSOLE
 
 If you use this `high_non_zero_count` function in a detector in your job, it
 models the count of events for the `signaturename` field. It ignores any buckets
@@ -214,7 +163,7 @@ data is sparse, use the `count` functions, which are optimized for that scenario
 
 [float]
 [[ml-distinct-count]]
-===== Distinct_count, high_distinct_count, low_distinct_count
+===== Distinct_count, High_distinct_count, Low_distinct_count
 
 The `distinct_count` function detects anomalies where the number of distinct
 values in one field is unusual.
@@ -238,21 +187,11 @@ see {ref}/ml-job-resource.html#ml-detectorconfig[Detector Configuration Objects]
 .Example 6: Analyzing users with the distinct_count function
 [source,js]
 --------------------------------------------------
-PUT _xpack/ml/anomaly_detectors/example6
 {
-  "analysis_config": {
-    "detectors": [{
-      "function" : "distinct_count",
-      "field_name" : "user"
-    }]
-  },
-  "data_description": {
-    "time_field":"timestamp",
-    "time_format": "epoch_ms"
-  }
+  "function" : "distinct_count",
+  "field_name" : "user"
 }
 --------------------------------------------------
-// CONSOLE
 
 This `distinct_count` function detects when a system has an unusual number
 of logged in users. When you use this function in a detector in your job, it
@@ -262,22 +201,12 @@ users is unusual compared to the past.
 .Example 7: Analyzing ports with the high_distinct_count function
 [source,js]
 --------------------------------------------------
-PUT _xpack/ml/anomaly_detectors/example7
 {
-  "analysis_config": {
-    "detectors": [{
-      "function" : "high_distinct_count",
-      "field_name" : "dst_port",
-      "over_field_name": "src_ip"
-    }]
-  },
-  "data_description": {
-    "time_field":"timestamp",
-    "time_format": "epoch_ms"
-  }
+  "function" : "high_distinct_count",
+  "field_name" : "dst_port",
+  "over_field_name": "src_ip"
 }
 --------------------------------------------------
-// CONSOLE
 
 This example detects instances of port scanning. When you use this function in a
 detector in your job, it models the distinct count of ports. It also detects the

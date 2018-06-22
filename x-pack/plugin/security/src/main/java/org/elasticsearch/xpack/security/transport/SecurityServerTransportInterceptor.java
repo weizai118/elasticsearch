@@ -9,14 +9,12 @@ import org.apache.logging.log4j.Logger;
 import org.elasticsearch.Version;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.support.DestructiveOperations;
-import org.elasticsearch.cluster.service.ClusterService;
 import org.elasticsearch.common.CheckedConsumer;
 import org.elasticsearch.common.component.AbstractComponent;
 import org.elasticsearch.common.settings.Setting;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.util.concurrent.AbstractRunnable;
 import org.elasticsearch.common.util.concurrent.ThreadContext;
-import org.elasticsearch.gateway.GatewayService;
 import org.elasticsearch.license.XPackLicenseState;
 import org.elasticsearch.tasks.Task;
 import org.elasticsearch.threadpool.ThreadPool;
@@ -74,8 +72,6 @@ public class SecurityServerTransportInterceptor extends AbstractComponent implem
     private final SecurityContext securityContext;
     private final boolean reservedRealmEnabled;
 
-    private volatile boolean isStateNotRecovered = true;
-
     public SecurityServerTransportInterceptor(Settings settings,
                                               ThreadPool threadPool,
                                               AuthenticationService authcService,
@@ -83,8 +79,7 @@ public class SecurityServerTransportInterceptor extends AbstractComponent implem
                                               XPackLicenseState licenseState,
                                               SSLService sslService,
                                               SecurityContext securityContext,
-                                              DestructiveOperations destructiveOperations,
-                                              ClusterService clusterService) {
+                                              DestructiveOperations destructiveOperations) {
         super(settings);
         this.settings = settings;
         this.threadPool = threadPool;
@@ -95,7 +90,6 @@ public class SecurityServerTransportInterceptor extends AbstractComponent implem
         this.securityContext = securityContext;
         this.profileFilters = initializeProfileFilters(destructiveOperations);
         this.reservedRealmEnabled = XPackSettings.RESERVED_REALM_ENABLED_SETTING.get(settings);
-        clusterService.addListener(e -> isStateNotRecovered = e.state().blocks().hasGlobalBlock(GatewayService.STATE_NOT_RECOVERED_BLOCK));
     }
 
     @Override
@@ -104,13 +98,7 @@ public class SecurityServerTransportInterceptor extends AbstractComponent implem
             @Override
             public <T extends TransportResponse> void sendRequest(Transport.Connection connection, String action, TransportRequest request,
                                                                   TransportRequestOptions options, TransportResponseHandler<T> handler) {
-                // make a local copy of isStateNotRecovered as this is a volatile variable and it
-                // is used multiple times in the method. The copy to a local variable allows us to
-                // guarantee we use the same value wherever we would check the value for the state
-                // being recovered
-                final boolean stateNotRecovered = isStateNotRecovered;
-                final boolean sendWithAuth = (licenseState.isSecurityEnabled() && licenseState.isAuthAllowed()) || stateNotRecovered;
-                if (sendWithAuth) {
+                if (licenseState.isSecurityEnabled() && licenseState.isAuthAllowed()) {
                     // the transport in core normally does this check, BUT since we are serializing to a string header we need to do it
                     // ourselves otherwise we wind up using a version newer than what we can actually send
                     final Version minVersion = Version.min(connection.getVersion(), Version.CURRENT);
@@ -120,20 +108,20 @@ public class SecurityServerTransportInterceptor extends AbstractComponent implem
                     if (AuthorizationUtils.shouldReplaceUserWithSystem(threadPool.getThreadContext(), action)) {
                         securityContext.executeAsUser(SystemUser.INSTANCE, (original) -> sendWithUser(connection, action, request, options,
                                 new ContextRestoreResponseHandler<>(threadPool.getThreadContext().wrapRestorable(original)
-                                        , handler), sender, stateNotRecovered), minVersion);
+                                        , handler), sender), minVersion);
                     } else if (AuthorizationUtils.shouldSetUserBasedOnActionOrigin(threadPool.getThreadContext())) {
                         AuthorizationUtils.switchUserBasedOnActionOriginAndExecute(threadPool.getThreadContext(), securityContext,
                                 (original) -> sendWithUser(connection, action, request, options,
                                         new ContextRestoreResponseHandler<>(threadPool.getThreadContext().wrapRestorable(original)
-                                                , handler), sender, stateNotRecovered));
+                                                , handler), sender));
                     } else if (securityContext.getAuthentication() != null &&
                             securityContext.getAuthentication().getVersion().equals(minVersion) == false) {
                         // re-write the authentication since we want the authentication version to match the version of the connection
                         securityContext.executeAfterRewritingAuthentication(original -> sendWithUser(connection, action, request, options,
-                            new ContextRestoreResponseHandler<>(threadPool.getThreadContext().wrapRestorable(original), handler), sender,
-                            stateNotRecovered), minVersion);
+                            new ContextRestoreResponseHandler<>(threadPool.getThreadContext().wrapRestorable(original), handler), sender),
+                            minVersion);
                     } else {
-                        sendWithUser(connection, action, request, options, handler, sender, stateNotRecovered);
+                        sendWithUser(connection, action, request, options, handler, sender);
                     }
                 } else {
                     sender.sendRequest(connection, action, request, options, handler);
@@ -144,10 +132,9 @@ public class SecurityServerTransportInterceptor extends AbstractComponent implem
 
     private <T extends TransportResponse> void sendWithUser(Transport.Connection connection, String action, TransportRequest request,
                                                             TransportRequestOptions options, TransportResponseHandler<T> handler,
-                                                            AsyncSender sender, final boolean stateNotRecovered) {
-        // There cannot be a request outgoing from this node that is not associated with a user
-        // unless we do not know the actual license of the cluster
-        if (securityContext.getAuthentication() == null && stateNotRecovered == false) {
+                                                            AsyncSender sender) {
+        // There cannot be a request outgoing from this node that is not associated with a user.
+        if (securityContext.getAuthentication() == null) {
             // we use an assertion here to ensure we catch this in our testing infrastructure, but leave the ISE for cases we do not catch
             // in tests and may be hit by a user
             assertNoAuthentication(action);

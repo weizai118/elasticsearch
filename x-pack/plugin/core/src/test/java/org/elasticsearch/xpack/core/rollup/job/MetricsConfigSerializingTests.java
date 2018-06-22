@@ -24,7 +24,7 @@ import static org.mockito.Mockito.when;
 public class MetricsConfigSerializingTests extends AbstractSerializingTestCase<MetricConfig> {
     @Override
     protected MetricConfig doParseInstance(XContentParser parser) throws IOException {
-        return MetricConfig.PARSER.apply(parser, null).build();
+        return MetricConfig.PARSER.apply(parser, null);
     }
 
     @Override
@@ -36,7 +36,7 @@ public class MetricsConfigSerializingTests extends AbstractSerializingTestCase<M
     protected MetricConfig createTestInstance() {
         return ConfigTestHelpers.getMetricConfig().build();
     }
-
+    
     public void testValidateNoMapping() throws IOException {
         ActionRequestValidationException e = new ActionRequestValidationException();
         Map<String, Map<String, FieldCapabilities>> responseMap = new HashMap<>();

@@ -194,10 +194,6 @@ public class TcpTransportTests extends ESTestCase {
                 }
 
                 @Override
-                protected void stopInternal() {
-                }
-
-                @Override
                 public NodeChannels getConnection(DiscoveryNode node) {
                     int numConnections = MockTcpTransport.LIGHT_PROFILE.getNumConnections();
                     ArrayList<TcpChannel> fakeChannels = new ArrayList<>(numConnections);
@@ -241,7 +237,7 @@ public class TcpTransportTests extends ESTestCase {
         }
     }
 
-    private static final class FakeChannel implements TcpChannel, TcpServerChannel {
+    private static final class FakeChannel implements TcpChannel {
 
         private final AtomicReference<BytesReference> messageCaptor;
 

@@ -66,7 +66,7 @@ public abstract class ChannelContext<S extends SelectableChannel & NetworkChanne
      * @throws IOException during channel / context close
      */
     public void closeFromSelector() throws IOException {
-        if (isOpen()) {
+        if (closeContext.isDone() == false) {
             try {
                 rawChannel.close();
                 closeContext.complete(null);

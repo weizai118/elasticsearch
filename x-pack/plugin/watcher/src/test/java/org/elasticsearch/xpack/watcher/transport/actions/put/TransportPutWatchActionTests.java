@@ -10,6 +10,7 @@ import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.support.ActionFilters;
 import org.elasticsearch.client.Client;
+import org.elasticsearch.cluster.metadata.IndexNameExpressionResolver;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.util.concurrent.ThreadContext;
 import org.elasticsearch.index.Index;
@@ -72,8 +73,9 @@ public class TransportPutWatchActionTests extends ESTestCase {
             return null;
         }).when(client).execute(any(), any(), any());
 
-        action = new TransportPutWatchAction(Settings.EMPTY, transportService, threadPool, new ActionFilters(Collections.emptySet()),
-            new ClockMock(), new XPackLicenseState(Settings.EMPTY), parser, client);
+        action = new TransportPutWatchAction(Settings.EMPTY, transportService, threadPool,
+                new ActionFilters(Collections.emptySet()), new IndexNameExpressionResolver(Settings.EMPTY), new ClockMock(),
+                new XPackLicenseState(Settings.EMPTY), parser, client);
     }
 
     public void testHeadersAreFilteredWhenPuttingWatches() throws Exception {

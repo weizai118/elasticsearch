@@ -79,15 +79,16 @@ public class ActionModuleTests extends ESTestCase {
             }
         }
         class FakeTransportAction extends TransportAction<FakeRequest, ActionResponse> {
-            protected FakeTransportAction(Settings settings, String actionName, ActionFilters actionFilters, TaskManager taskManager) {
-                super(settings, actionName, actionFilters, taskManager);
+            protected FakeTransportAction(Settings settings, String actionName, ThreadPool threadPool, ActionFilters actionFilters,
+                    IndexNameExpressionResolver indexNameExpressionResolver, TaskManager taskManager) {
+                super(settings, actionName, threadPool, actionFilters, indexNameExpressionResolver, taskManager);
             }
 
             @Override
             protected void doExecute(FakeRequest request, ActionListener<ActionResponse> listener) {
             }
         }
-        class FakeAction extends Action<ActionResponse> {
+        class FakeAction extends GenericAction<FakeRequest, ActionResponse> {
             protected FakeAction() {
                 super("fake");
             }

@@ -210,12 +210,13 @@ public class PersistentTasksNodeServiceTests extends ESTestCase {
 
         ClusterState state = createInitialClusterState(1, Settings.EMPTY);
 
-        PersistentTaskState taskState = new TestPersistentTasksPlugin.State("_test_phase");
+        Task.Status status = new TestPersistentTasksPlugin.Status("_test_phase");
         PersistentTasksCustomMetaData.Builder tasks = PersistentTasksCustomMetaData.builder();
         String taskId = UUIDs.base64UUID();
         TestParams taskParams = new TestParams("other_0");
-        tasks.addTask(taskId, TestPersistentTasksExecutor.NAME, taskParams, new Assignment("this_node", "test assignment on other node"));
-        tasks.updateTaskState(taskId, taskState);
+        tasks.addTask(taskId, TestPersistentTasksExecutor.NAME, taskParams,
+                new Assignment("this_node", "test assignment on other node"));
+        tasks.updateTaskStatus(taskId, status);
         MetaData.Builder metaData = MetaData.builder(state.metaData());
         metaData.putCustom(PersistentTasksCustomMetaData.TYPE, tasks.build());
         ClusterState newClusterState = ClusterState.builder(state).metaData(metaData).build();
@@ -224,7 +225,7 @@ public class PersistentTasksNodeServiceTests extends ESTestCase {
 
         assertThat(executor.size(), equalTo(1));
         assertThat(executor.get(0).params, sameInstance(taskParams));
-        assertThat(executor.get(0).state, sameInstance(taskState));
+        assertThat(executor.get(0).status, sameInstance(status));
         assertThat(executor.get(0).task, sameInstance(nodeTask));
     }
 
@@ -330,16 +331,15 @@ public class PersistentTasksNodeServiceTests extends ESTestCase {
     }
 
     private class Execution {
-
         private final PersistentTaskParams params;
         private final AllocatedPersistentTask task;
-        private final PersistentTaskState state;
+        private final Task.Status status;
         private final PersistentTasksExecutor<?> holder;
 
-        Execution(PersistentTaskParams params, AllocatedPersistentTask task, PersistentTaskState state, PersistentTasksExecutor<?> holder) {
+        Execution(PersistentTaskParams params, AllocatedPersistentTask task, Task.Status status, PersistentTasksExecutor<?> holder) {
             this.params = params;
             this.task = task;
-            this.state = state;
+            this.status = status;
             this.holder = holder;
         }
     }
@@ -352,11 +352,11 @@ public class PersistentTasksNodeServiceTests extends ESTestCase {
         }
 
         @Override
-        public <Params extends PersistentTaskParams> void executeTask(final Params params,
-                                                                      final PersistentTaskState state,
-                                                                      final AllocatedPersistentTask task,
-                                                                      final PersistentTasksExecutor<Params> executor) {
-            executions.add(new Execution(params, task, state, executor));
+        public <Params extends PersistentTaskParams> void executeTask(Params params,
+                                                                      Task.Status status,
+                                                                      AllocatedPersistentTask task,
+                                                                      PersistentTasksExecutor<Params> executor) {
+            executions.add(new Execution(params, task, status, executor));
         }
 
         public Execution get(int i) {

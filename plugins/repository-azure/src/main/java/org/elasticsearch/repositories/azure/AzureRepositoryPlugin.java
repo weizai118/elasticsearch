@@ -21,13 +21,12 @@ package org.elasticsearch.repositories.azure;
 
 import org.elasticsearch.common.settings.Setting;
 import org.elasticsearch.common.settings.Settings;
-import org.elasticsearch.common.settings.SettingsException;
 import org.elasticsearch.common.xcontent.NamedXContentRegistry;
 import org.elasticsearch.env.Environment;
 import org.elasticsearch.plugins.Plugin;
-import org.elasticsearch.plugins.ReloadablePlugin;
 import org.elasticsearch.plugins.RepositoryPlugin;
 import org.elasticsearch.repositories.Repository;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -36,20 +35,24 @@ import java.util.Map;
 /**
  * A plugin to add a repository type that writes to and from the Azure cloud storage service.
  */
-public class AzureRepositoryPlugin extends Plugin implements RepositoryPlugin, ReloadablePlugin {
+public class AzureRepositoryPlugin extends Plugin implements RepositoryPlugin {
 
-    // protected for testing
-    final AzureStorageService azureStoreService;
+    private final Map<String, AzureStorageSettings> clientsSettings;
+
+    // overridable for tests
+    protected AzureStorageService createStorageService(Settings settings) {
+        return new AzureStorageServiceImpl(settings, clientsSettings);
+    }
 
     public AzureRepositoryPlugin(Settings settings) {
         // eagerly load client settings so that secure settings are read
-        this.azureStoreService = new AzureStorageServiceImpl(settings);
+        clientsSettings = AzureStorageSettings.load(settings);
     }
 
     @Override
     public Map<String, Repository.Factory> getRepositories(Environment env, NamedXContentRegistry namedXContentRegistry) {
         return Collections.singletonMap(AzureRepository.TYPE,
-                (metadata) -> new AzureRepository(metadata, env, namedXContentRegistry, azureStoreService));
+            (metadata) -> new AzureRepository(metadata, env, namedXContentRegistry, createStorageService(env.settings())));
     }
 
     @Override
@@ -63,15 +66,5 @@ public class AzureRepositoryPlugin extends Plugin implements RepositoryPlugin, R
             AzureStorageSettings.PROXY_HOST_SETTING,
             AzureStorageSettings.PROXY_PORT_SETTING
         );
-    }
-
-    @Override
-    public void reload(Settings settings) {
-        // secure settings should be readable
-        final Map<String, AzureStorageSettings> clientsSettings = AzureStorageSettings.load(settings);
-        if (clientsSettings.isEmpty()) {
-            throw new SettingsException("If you want to use an azure repository, you need to define a client configuration.");
-        }
-        azureStoreService.refreshAndClearCache(clientsSettings);
     }
 }

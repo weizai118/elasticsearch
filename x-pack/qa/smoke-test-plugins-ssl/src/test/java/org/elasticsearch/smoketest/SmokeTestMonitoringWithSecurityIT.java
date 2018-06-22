@@ -17,6 +17,7 @@ import org.elasticsearch.xpack.core.action.XPackUsageRequestBuilder;
 import org.elasticsearch.xpack.core.action.XPackUsageResponse;
 import org.elasticsearch.xpack.core.monitoring.MonitoringFeatureSetUsage;
 import org.elasticsearch.xpack.core.security.SecurityField;
+import org.elasticsearch.xpack.core.test.XPackIntegTestCase;
 import org.junit.After;
 import org.junit.Before;
 
@@ -41,7 +42,7 @@ import static org.hamcrest.Matchers.is;
  * then uses a transport client to check that the data have been correctly received and
  * indexed in the cluster.
  */
-public class SmokeTestMonitoringWithSecurityIT extends ESIntegTestCase {
+public class SmokeTestMonitoringWithSecurityIT extends XPackIntegTestCase {
     private static final String USER = "test_user";
     private static final String PASS = "x-pack-test-password";
     private static final String MONITORING_PATTERN = ".monitoring-*";
@@ -95,7 +96,7 @@ public class SmokeTestMonitoringWithSecurityIT extends ESIntegTestCase {
     public void testHTTPExporterWithSSL() throws Exception {
         // Ensures that the exporter is actually on
         assertBusy(() -> assertThat("[_http] exporter is not defined", getMonitoringUsageExportersDefined(), is(true)));
-
+        
         // Checks that the monitoring index templates have been installed
         assertBusy(() -> {
             GetIndexTemplatesResponse response = client().admin().indices().prepareGetTemplates(MONITORING_PATTERN).get();

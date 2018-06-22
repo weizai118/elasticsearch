@@ -11,9 +11,10 @@ import org.elasticsearch.common.xcontent.json.JsonXContent;
 import org.elasticsearch.test.AbstractSerializingTestCase;
 
 import java.io.IOException;
-import java.util.TreeSet;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
-import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 
@@ -25,25 +26,12 @@ public class MlFilterTests extends AbstractSerializingTestCase<MlFilter> {
 
     @Override
     protected MlFilter createTestInstance() {
-        return createRandom();
-    }
-
-    public static MlFilter createRandom() {
-        return createRandom(randomAlphaOfLengthBetween(1, 20));
-    }
-
-    public static MlFilter createRandom(String filterId) {
-        String description = null;
-        if (randomBoolean()) {
-            description = randomAlphaOfLength(20);
-        }
-
         int size = randomInt(10);
-        TreeSet<String> items = new TreeSet<>();
+        List<String> items = new ArrayList<>(size);
         for (int i = 0; i < size; i++) {
             items.add(randomAlphaOfLengthBetween(1, 20));
         }
-        return new MlFilter(filterId, description, items);
+        return new MlFilter(randomAlphaOfLengthBetween(1, 20), items);
     }
 
     @Override
@@ -57,13 +45,13 @@ public class MlFilterTests extends AbstractSerializingTestCase<MlFilter> {
     }
 
     public void testNullId() {
-        NullPointerException ex = expectThrows(NullPointerException.class, () -> new MlFilter(null, "", new TreeSet<>()));
+        NullPointerException ex = expectThrows(NullPointerException.class, () -> new MlFilter(null, Collections.emptyList()));
         assertEquals(MlFilter.ID.getPreferredName() + " must not be null", ex.getMessage());
     }
 
     public void testNullItems() {
         NullPointerException ex =
-                expectThrows(NullPointerException.class, () -> new MlFilter(randomAlphaOfLengthBetween(1, 20), "", null));
+                expectThrows(NullPointerException.class, () -> new MlFilter(randomAlphaOfLengthBetween(1, 20), null));
         assertEquals(MlFilter.ITEMS.getPreferredName() + " must not be null", ex.getMessage());
     }
 
@@ -86,15 +74,5 @@ public class MlFilterTests extends AbstractSerializingTestCase<MlFilter> {
         try (XContentParser parser = createParser(JsonXContent.jsonXContent, json)) {
             MlFilter.LENIENT_PARSER.apply(parser, null);
         }
-    }
-
-    public void testItemsAreSorted() {
-        MlFilter filter = MlFilter.builder("foo").setItems("c", "b", "a").build();
-        assertThat(filter.getItems(), contains("a", "b", "c"));
-    }
-
-    public void testGetItemsReturnsUnmodifiable() {
-        MlFilter filter = MlFilter.builder("foo").setItems("c", "b", "a").build();
-        expectThrows(UnsupportedOperationException.class, () -> filter.getItems().add("x"));
     }
 }

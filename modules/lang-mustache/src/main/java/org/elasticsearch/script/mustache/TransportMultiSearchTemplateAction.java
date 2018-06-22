@@ -23,13 +23,15 @@ import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.search.MultiSearchRequest;
 import org.elasticsearch.action.search.MultiSearchResponse;
 import org.elasticsearch.action.search.SearchRequest;
+import org.elasticsearch.action.search.TransportMultiSearchAction;
 import org.elasticsearch.action.support.ActionFilters;
 import org.elasticsearch.action.support.HandledTransportAction;
-import org.elasticsearch.client.node.NodeClient;
+import org.elasticsearch.cluster.metadata.IndexNameExpressionResolver;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.xcontent.NamedXContentRegistry;
 import org.elasticsearch.script.ScriptService;
+import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.TransportService;
 
 import java.util.ArrayList;
@@ -41,16 +43,18 @@ public class TransportMultiSearchTemplateAction extends HandledTransportAction<M
 
     private final ScriptService scriptService;
     private final NamedXContentRegistry xContentRegistry;
-    private final NodeClient client;
+    private final TransportMultiSearchAction multiSearchAction;
 
     @Inject
-    public TransportMultiSearchTemplateAction(Settings settings, TransportService transportService,
-                                              ActionFilters actionFilters, ScriptService scriptService,
-                                              NamedXContentRegistry xContentRegistry, NodeClient client) {
-        super(settings, MultiSearchTemplateAction.NAME, transportService, actionFilters, MultiSearchTemplateRequest::new);
+    public TransportMultiSearchTemplateAction(Settings settings, ThreadPool threadPool, TransportService transportService,
+                                              ActionFilters actionFilters, IndexNameExpressionResolver resolver,
+                                              ScriptService scriptService, NamedXContentRegistry xContentRegistry,
+                                              TransportMultiSearchAction multiSearchAction) {
+        super(settings, MultiSearchTemplateAction.NAME, threadPool, transportService, actionFilters, resolver,
+                MultiSearchTemplateRequest::new);
         this.scriptService = scriptService;
         this.xContentRegistry = xContentRegistry;
-        this.client = client;
+        this.multiSearchAction = multiSearchAction;
     }
 
     @Override
@@ -80,7 +84,7 @@ public class TransportMultiSearchTemplateAction extends HandledTransportAction<M
             }
         }
 
-        client.multiSearch(multiSearchRequest, ActionListener.wrap(r -> {
+        multiSearchAction.execute(multiSearchRequest, ActionListener.wrap(r -> {
             for (int i = 0; i < r.getResponses().length; i++) {
                 MultiSearchResponse.Item item = r.getResponses()[i];
                 int originalSlot = originalSlots.get(i);

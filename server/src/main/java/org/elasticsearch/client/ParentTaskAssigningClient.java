@@ -22,6 +22,7 @@ package org.elasticsearch.client;
 import org.elasticsearch.action.Action;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.ActionRequest;
+import org.elasticsearch.action.ActionRequestBuilder;
 import org.elasticsearch.action.ActionResponse;
 import org.elasticsearch.cluster.node.DiscoveryNode;
 import org.elasticsearch.tasks.Task;
@@ -57,8 +58,10 @@ public class ParentTaskAssigningClient extends FilterClient {
     }
 
     @Override
-    protected <Request extends ActionRequest, Response extends ActionResponse>
-    void doExecute(Action<Response> action, Request request, ActionListener<Response> listener) {
+    protected <     Request extends ActionRequest,
+                    Response extends ActionResponse,
+                    RequestBuilder extends ActionRequestBuilder<Request, Response>
+              > void doExecute(Action<Request, Response> action, Request request, ActionListener<Response> listener) {
         request.setParentTask(parentTask);
         super.doExecute(action, request, listener);
     }

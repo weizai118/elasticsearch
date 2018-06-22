@@ -19,15 +19,15 @@
 
 package org.elasticsearch.action.admin.cluster.remote;
 
-import java.util.function.Supplier;
-
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.transport.RemoteClusterService;
 import org.elasticsearch.action.search.SearchTransportService;
 import org.elasticsearch.action.support.ActionFilters;
 import org.elasticsearch.action.support.HandledTransportAction;
+import org.elasticsearch.cluster.metadata.IndexNameExpressionResolver;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.TransportService;
 
 import static java.util.stream.Collectors.toList;
@@ -37,10 +37,11 @@ public final class TransportRemoteInfoAction extends HandledTransportAction<Remo
     private final RemoteClusterService remoteClusterService;
 
     @Inject
-    public TransportRemoteInfoAction(Settings settings, TransportService transportService,
-                                     ActionFilters actionFilters, SearchTransportService searchTransportService) {
-        super(settings, RemoteInfoAction.NAME, transportService, actionFilters,
-            (Supplier<RemoteInfoRequest>) RemoteInfoRequest::new);
+    public TransportRemoteInfoAction(Settings settings, ThreadPool threadPool, TransportService transportService,
+                                     ActionFilters actionFilters, IndexNameExpressionResolver indexNameExpressionResolver,
+                                     SearchTransportService searchTransportService) {
+        super(settings, RemoteInfoAction.NAME, threadPool, transportService, actionFilters, RemoteInfoRequest::new,
+            indexNameExpressionResolver);
         this.remoteClusterService = searchTransportService.getRemoteClusterService();
     }
 

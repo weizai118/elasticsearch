@@ -29,7 +29,6 @@ import org.apache.lucene.index.SegmentCommitInfo;
 import org.apache.lucene.index.SegmentInfos;
 import org.apache.lucene.index.SegmentReader;
 import org.apache.lucene.index.Term;
-import org.apache.lucene.search.Query;
 import org.apache.lucene.search.QueryCachingPolicy;
 import org.apache.lucene.search.ReferenceManager;
 import org.apache.lucene.search.Sort;
@@ -300,16 +299,7 @@ public class IndexShard extends AbstractIndexShardComponent implements IndicesCl
         // the query cache is a node-level thing, however we want the most popular filters
         // to be computed on a per-shard basis
         if (IndexModule.INDEX_QUERY_CACHE_EVERYTHING_SETTING.get(settings)) {
-            cachingPolicy = new QueryCachingPolicy() {
-                @Override
-                public void onUse(Query query) {
-
-                }
-                @Override
-                public boolean shouldCache(Query query) {
-                    return true;
-                }
-            };
+            cachingPolicy = QueryCachingPolicy.ALWAYS_CACHE;
         } else {
             cachingPolicy = new UsageTrackingQueryCachingPolicy();
         }

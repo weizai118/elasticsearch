@@ -250,7 +250,7 @@ public class TransportNodesActionTests extends ESTestCase {
                 transportService, ActionFilters actionFilters, Supplier<TestNodesRequest> request,
                                  Supplier<TestNodeRequest> nodeRequest, String nodeExecutor) {
             super(settings, "indices:admin/test", threadPool, clusterService, transportService, actionFilters,
-                request, nodeRequest, nodeExecutor, TestNodeResponse.class);
+                    null, request, nodeRequest, nodeExecutor, TestNodeResponse.class);
         }
 
         @Override

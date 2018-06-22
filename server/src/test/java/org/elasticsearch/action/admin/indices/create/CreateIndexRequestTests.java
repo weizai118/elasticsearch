@@ -93,7 +93,6 @@ public class CreateIndexRequestTests extends ESTestCase {
         Alias alias = new Alias("test_alias");
         alias.routing("1");
         alias.filter("{\"term\":{\"year\":2016}}");
-        alias.writeIndex(true);
         request.alias(alias);
 
         Settings.Builder settings = Settings.builder();
@@ -104,7 +103,7 @@ public class CreateIndexRequestTests extends ESTestCase {
 
         String expectedRequestBody = "{\"settings\":{\"index\":{\"number_of_shards\":\"10\"}}," +
             "\"mappings\":{\"my_type\":{\"type\":{}}}," +
-            "\"aliases\":{\"test_alias\":{\"filter\":{\"term\":{\"year\":2016}},\"routing\":\"1\",\"is_write_index\":true}}}";
+            "\"aliases\":{\"test_alias\":{\"filter\":{\"term\":{\"year\":2016}},\"routing\":\"1\"}}}";
 
         assertEquals(expectedRequestBody, actualRequestBody);
     }

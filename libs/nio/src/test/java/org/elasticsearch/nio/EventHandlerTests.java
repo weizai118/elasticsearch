@@ -23,7 +23,6 @@ import org.elasticsearch.test.ESTestCase;
 import org.junit.Before;
 
 import java.io.IOException;
-import java.net.ServerSocket;
 import java.nio.channels.CancelledKeyException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
@@ -70,9 +69,7 @@ public class EventHandlerTests extends ESTestCase {
         channel.setContext(context);
         handler.handleRegistration(context);
 
-        ServerSocketChannel serverSocketChannel = mock(ServerSocketChannel.class);
-        when(serverSocketChannel.socket()).thenReturn(mock(ServerSocket.class));
-        NioServerSocketChannel serverChannel = new NioServerSocketChannel(serverSocketChannel);
+        NioServerSocketChannel serverChannel = new NioServerSocketChannel(mock(ServerSocketChannel.class));
         serverContext = new DoNotRegisterServerContext(serverChannel, mock(NioSelector.class), mock(Consumer.class));
         serverChannel.setContext(serverContext);
 

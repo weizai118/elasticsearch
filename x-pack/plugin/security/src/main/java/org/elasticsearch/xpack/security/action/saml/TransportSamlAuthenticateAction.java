@@ -11,6 +11,7 @@ import org.apache.logging.log4j.message.ParameterizedMessage;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.support.ActionFilters;
 import org.elasticsearch.action.support.HandledTransportAction;
+import org.elasticsearch.cluster.metadata.IndexNameExpressionResolver;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.unit.TimeValue;
@@ -31,16 +32,15 @@ import org.elasticsearch.xpack.security.authc.saml.SamlToken;
  */
 public final class TransportSamlAuthenticateAction extends HandledTransportAction<SamlAuthenticateRequest, SamlAuthenticateResponse> {
 
-    private final ThreadPool threadPool;
     private final AuthenticationService authenticationService;
     private final TokenService tokenService;
 
     @Inject
     public TransportSamlAuthenticateAction(Settings settings, ThreadPool threadPool, TransportService transportService,
-                                           ActionFilters actionFilters, AuthenticationService authenticationService,
-                                           TokenService tokenService) {
-        super(settings, SamlAuthenticateAction.NAME, transportService, actionFilters, SamlAuthenticateRequest::new);
-        this.threadPool = threadPool;
+                                           ActionFilters actionFilters, IndexNameExpressionResolver indexNameExpressionResolver,
+                                           AuthenticationService authenticationService, TokenService tokenService) {
+        super(settings, SamlAuthenticateAction.NAME, threadPool, transportService, actionFilters, indexNameExpressionResolver,
+                SamlAuthenticateRequest::new);
         this.authenticationService = authenticationService;
         this.tokenService = tokenService;
     }

@@ -13,8 +13,8 @@ import java.io.IOException;
 import java.util.Locale;
 
 public enum RuleAction implements Writeable {
-    SKIP_RESULT,
-    SKIP_MODEL_UPDATE;
+    FILTER_RESULTS,
+    SKIP_SAMPLING;
 
     /**
      * Case-insensitive from string method.

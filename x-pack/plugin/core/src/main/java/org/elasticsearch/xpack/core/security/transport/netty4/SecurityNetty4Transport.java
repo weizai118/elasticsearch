@@ -13,7 +13,6 @@ import io.netty.channel.ChannelPromise;
 import io.netty.handler.ssl.SslHandler;
 import org.apache.logging.log4j.message.ParameterizedMessage;
 import org.elasticsearch.common.io.stream.NamedWriteableRegistry;
-import org.elasticsearch.common.network.CloseableChannel;
 import org.elasticsearch.common.network.NetworkService;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.util.BigArrays;
@@ -109,10 +108,10 @@ public class SecurityNetty4Transport extends Netty4Transport {
     }
 
     @Override
-    public void onException(TcpChannel channel, Exception e) {
+    protected void onException(TcpChannel channel, Exception e) {
         if (!lifecycle.started()) {
             // just close and ignore - we are already stopped and just need to make sure we release all resources
-            CloseableChannel.closeChannel(channel);
+            TcpChannel.closeChannel(channel);
         } else if (SSLExceptionHelper.isNotSslRecordException(e)) {
             if (logger.isTraceEnabled()) {
                 logger.trace(
@@ -120,21 +119,21 @@ public class SecurityNetty4Transport extends Netty4Transport {
             } else {
                 logger.warn("received plaintext traffic on an encrypted channel, closing connection {}", channel);
             }
-            CloseableChannel.closeChannel(channel);
+            TcpChannel.closeChannel(channel);
         } else if (SSLExceptionHelper.isCloseDuringHandshakeException(e)) {
             if (logger.isTraceEnabled()) {
                 logger.trace(new ParameterizedMessage("connection {} closed during ssl handshake", channel), e);
             } else {
                 logger.warn("connection {} closed during handshake", channel);
             }
-            CloseableChannel.closeChannel(channel);
+            TcpChannel.closeChannel(channel);
         } else if (SSLExceptionHelper.isReceivedCertificateUnknownException(e)) {
             if (logger.isTraceEnabled()) {
                 logger.trace(new ParameterizedMessage("client did not trust server's certificate, closing connection {}", channel), e);
             } else {
                 logger.warn("client did not trust this server's certificate, closing connection {}", channel);
             }
-            CloseableChannel.closeChannel(channel);
+            TcpChannel.closeChannel(channel);
         } else {
             super.onException(channel, e);
         }

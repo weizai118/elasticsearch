@@ -1,6 +1,5 @@
-[role="xpack"]
 [[ml-configuring-pop]]
-=== Performing population analysis
+=== Performing Population Analysis
 
 Entities or events in your data can be considered anomalous when:
 

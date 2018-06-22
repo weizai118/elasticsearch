@@ -25,6 +25,7 @@ import org.elasticsearch.ResourceAlreadyExistsException;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.admin.indices.create.CreateIndexRequest;
 import org.elasticsearch.action.admin.indices.create.CreateIndexResponse;
+import org.elasticsearch.action.admin.indices.create.TransportCreateIndexAction;
 import org.elasticsearch.action.admin.indices.mapping.put.PutMappingResponse;
 import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.index.IndexResponse;
@@ -68,11 +69,15 @@ public class TaskResultsService extends AbstractComponent {
 
     private final ClusterService clusterService;
 
+    private final TransportCreateIndexAction createIndexAction;
+
     @Inject
-    public TaskResultsService(Settings settings, Client client, ClusterService clusterService) {
+    public TaskResultsService(Settings settings, Client client, ClusterService clusterService,
+                              TransportCreateIndexAction createIndexAction) {
         super(settings);
         this.client = client;
         this.clusterService = clusterService;
+        this.createIndexAction = createIndexAction;
     }
 
     public void storeResult(TaskResult taskResult, ActionListener<Void> listener) {
@@ -86,7 +91,7 @@ public class TaskResultsService extends AbstractComponent {
             createIndexRequest.mapping(TASK_TYPE, taskResultIndexMapping(), XContentType.JSON);
             createIndexRequest.cause("auto(task api)");
 
-            client.admin().indices().create(createIndexRequest, new ActionListener<CreateIndexResponse>() {
+            createIndexAction.execute(null, createIndexRequest, new ActionListener<CreateIndexResponse>() {
                 @Override
                 public void onResponse(CreateIndexResponse result) {
                     doStoreResult(taskResult, listener);

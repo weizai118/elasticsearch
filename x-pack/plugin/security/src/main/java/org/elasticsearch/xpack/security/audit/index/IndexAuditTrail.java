@@ -69,6 +69,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -828,9 +829,10 @@ public class IndexAuditTrail extends AbstractComponent implements AuditTrail, Cl
             msg.builder.field(Field.REQUEST_BODY, restRequestContent(request));
         }
         msg.builder.field(Field.ORIGIN_TYPE, "rest");
-        InetSocketAddress address = request.getHttpChannel().getRemoteAddress();
-        if (address != null) {
-            msg.builder.field(Field.ORIGIN_ADDRESS, NetworkAddress.format(address.getAddress()));
+        SocketAddress address = request.getRemoteAddress();
+        if (address instanceof InetSocketAddress) {
+            msg.builder.field(Field.ORIGIN_ADDRESS, NetworkAddress.format(((InetSocketAddress) request.getRemoteAddress())
+                    .getAddress()));
         } else {
             msg.builder.field(Field.ORIGIN_ADDRESS, address);
         }
@@ -852,9 +854,10 @@ public class IndexAuditTrail extends AbstractComponent implements AuditTrail, Cl
             msg.builder.field(Field.REQUEST_BODY, restRequestContent(request));
         }
         msg.builder.field(Field.ORIGIN_TYPE, "rest");
-        InetSocketAddress address = request.getHttpChannel().getRemoteAddress();
-        if (address != null) {
-            msg.builder.field(Field.ORIGIN_ADDRESS, NetworkAddress.format(address.getAddress()));
+        SocketAddress address = request.getRemoteAddress();
+        if (address instanceof InetSocketAddress) {
+            msg.builder.field(Field.ORIGIN_ADDRESS, NetworkAddress.format(((InetSocketAddress) request.getRemoteAddress())
+                    .getAddress()));
         } else {
             msg.builder.field(Field.ORIGIN_ADDRESS, address);
         }

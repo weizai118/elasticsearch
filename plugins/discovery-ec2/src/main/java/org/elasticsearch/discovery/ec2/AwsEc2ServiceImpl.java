@@ -19,9 +19,12 @@
 
 package org.elasticsearch.discovery.ec2;
 
+import java.io.Closeable;
+import java.io.IOException;
 import java.util.Random;
-import java.util.concurrent.atomic.AtomicReference;
 
+import com.amazonaws.AmazonClientException;
+import com.amazonaws.AmazonWebServiceRequest;
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
@@ -32,117 +35,112 @@ import com.amazonaws.retry.RetryPolicy;
 import com.amazonaws.services.ec2.AmazonEC2;
 import com.amazonaws.services.ec2.AmazonEC2Client;
 import org.apache.logging.log4j.Logger;
-import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.common.Randomness;
-import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.component.AbstractComponent;
+import org.elasticsearch.common.settings.SecureString;
 import org.elasticsearch.common.settings.Settings;
-import org.elasticsearch.common.util.LazyInitializable;
 
-class AwsEc2ServiceImpl extends AbstractComponent implements AwsEc2Service {
+class AwsEc2ServiceImpl extends AbstractComponent implements AwsEc2Service, Closeable {
 
     public static final String EC2_METADATA_URL = "http://169.254.169.254/latest/meta-data/";
 
-    private final AtomicReference<LazyInitializable<AmazonEc2Reference, ElasticsearchException>> lazyClientReference =
-            new AtomicReference<>();
+    private AmazonEC2Client client;
 
     AwsEc2ServiceImpl(Settings settings) {
         super(settings);
     }
 
-    private AmazonEC2 buildClient(Ec2ClientSettings clientSettings) {
-        final AWSCredentialsProvider credentials = buildCredentials(logger, clientSettings);
-        final ClientConfiguration configuration = buildConfiguration(logger, clientSettings);
-        final AmazonEC2 client = buildClient(credentials, configuration);
-        if (Strings.hasText(clientSettings.endpoint)) {
-            logger.debug("using explicit ec2 endpoint [{}]", clientSettings.endpoint);
-            client.setEndpoint(clientSettings.endpoint);
+    @Override
+    public synchronized AmazonEC2 client() {
+        if (client != null) {
+            return client;
         }
-        return client;
+
+        this.client = new AmazonEC2Client(buildCredentials(logger, settings), buildConfiguration(logger, settings));
+        String endpoint = findEndpoint(logger, settings);
+        if (endpoint != null) {
+            client.setEndpoint(endpoint);
+        }
+
+        return this.client;
     }
 
-    // proxy for testing
-    AmazonEC2 buildClient(AWSCredentialsProvider credentials, ClientConfiguration configuration) {
-        final AmazonEC2 client = new AmazonEC2Client(credentials, configuration);
-        return client;
+    protected static AWSCredentialsProvider buildCredentials(Logger logger, Settings settings) {
+        AWSCredentialsProvider credentials;
+
+        try (SecureString key = ACCESS_KEY_SETTING.get(settings);
+             SecureString secret = SECRET_KEY_SETTING.get(settings)) {
+            if (key.length() == 0 && secret.length() == 0) {
+                logger.debug("Using either environment variables, system properties or instance profile credentials");
+                credentials = new DefaultAWSCredentialsProviderChain();
+            } else {
+                logger.debug("Using basic key/secret credentials");
+                credentials = new StaticCredentialsProvider(new BasicAWSCredentials(key.toString(), secret.toString()));
+            }
+        }
+
+        return credentials;
     }
 
-    // pkg private for tests
-    static ClientConfiguration buildConfiguration(Logger logger, Ec2ClientSettings clientSettings) {
-        final ClientConfiguration clientConfiguration = new ClientConfiguration();
+    protected static ClientConfiguration buildConfiguration(Logger logger, Settings settings) {
+        ClientConfiguration clientConfiguration = new ClientConfiguration();
         // the response metadata cache is only there for diagnostics purposes,
         // but can force objects from every response to the old generation.
         clientConfiguration.setResponseMetadataCacheSize(0);
-        clientConfiguration.setProtocol(clientSettings.protocol);
-        if (Strings.hasText(clientSettings.proxyHost)) {
-            // TODO: remove this leniency, these settings should exist together and be validated
-            clientConfiguration.setProxyHost(clientSettings.proxyHost);
-            clientConfiguration.setProxyPort(clientSettings.proxyPort);
-            clientConfiguration.setProxyUsername(clientSettings.proxyUsername);
-            clientConfiguration.setProxyPassword(clientSettings.proxyPassword);
+        clientConfiguration.setProtocol(PROTOCOL_SETTING.get(settings));
+
+        if (PROXY_HOST_SETTING.exists(settings)) {
+            String proxyHost = PROXY_HOST_SETTING.get(settings);
+            Integer proxyPort = PROXY_PORT_SETTING.get(settings);
+            try (SecureString proxyUsername = PROXY_USERNAME_SETTING.get(settings);
+                 SecureString proxyPassword = PROXY_PASSWORD_SETTING.get(settings)) {
+
+                clientConfiguration
+                    .withProxyHost(proxyHost)
+                    .withProxyPort(proxyPort)
+                    .withProxyUsername(proxyUsername.toString())
+                    .withProxyPassword(proxyPassword.toString());
+            }
         }
+
         // Increase the number of retries in case of 5xx API responses
         final Random rand = Randomness.get();
-        final RetryPolicy retryPolicy = new RetryPolicy(
+        RetryPolicy retryPolicy = new RetryPolicy(
             RetryPolicy.RetryCondition.NO_RETRY_CONDITION,
-            (originalRequest, exception, retriesAttempted) -> {
-               // with 10 retries the max delay time is 320s/320000ms (10 * 2^5 * 1 * 1000)
-               logger.warn("EC2 API request failed, retry again. Reason was:", exception);
-               return 1000L * (long) (10d * Math.pow(2, retriesAttempted / 2.0d) * (1.0d + rand.nextDouble()));
+            new RetryPolicy.BackoffStrategy() {
+                @Override
+                public long delayBeforeNextRetry(AmazonWebServiceRequest originalRequest,
+                                                 AmazonClientException exception,
+                                                 int retriesAttempted) {
+                    // with 10 retries the max delay time is 320s/320000ms (10 * 2^5 * 1 * 1000)
+                    logger.warn("EC2 API request failed, retry again. Reason was:", exception);
+                    return 1000L * (long) (10d * Math.pow(2, retriesAttempted / 2.0d) * (1.0d + rand.nextDouble()));
+                }
             },
             10,
             false);
         clientConfiguration.setRetryPolicy(retryPolicy);
-        clientConfiguration.setSocketTimeout(clientSettings.readTimeoutMillis);
+        clientConfiguration.setSocketTimeout((int) READ_TIMEOUT_SETTING.get(settings).millis());
+
         return clientConfiguration;
     }
 
-    // pkg private for tests
-    static AWSCredentialsProvider buildCredentials(Logger logger, Ec2ClientSettings clientSettings) {
-        final BasicAWSCredentials credentials = clientSettings.credentials;
-        if (credentials == null) {
-            logger.debug("Using either environment variables, system properties or instance profile credentials");
-            return new DefaultAWSCredentialsProviderChain();
-        } else {
-            logger.debug("Using basic key/secret credentials");
-            return new StaticCredentialsProvider(credentials);
+    protected static String findEndpoint(Logger logger, Settings settings) {
+        String endpoint = null;
+        if (ENDPOINT_SETTING.exists(settings)) {
+            endpoint = ENDPOINT_SETTING.get(settings);
+            logger.debug("using explicit ec2 endpoint [{}]", endpoint);
         }
+        return endpoint;
     }
 
     @Override
-    public AmazonEc2Reference client() {
-        final LazyInitializable<AmazonEc2Reference, ElasticsearchException> clientReference = this.lazyClientReference.get();
-        if (clientReference == null) {
-            throw new IllegalStateException("Missing ec2 client configs");
+    public void close() throws IOException {
+        if (client != null) {
+            client.shutdown();
         }
-        return clientReference.getOrCompute();
-    }
 
-    /**
-     * Refreshes the settings for the AmazonEC2 client. The new client will be build
-     * using these new settings. The old client is usable until released. On release it
-     * will be destroyed instead of being returned to the cache.
-     */
-    @Override
-    public void refreshAndClearCache(Ec2ClientSettings clientSettings) {
-        final LazyInitializable<AmazonEc2Reference, ElasticsearchException> newClient = new LazyInitializable<>(
-                () -> new AmazonEc2Reference(buildClient(clientSettings)), clientReference -> clientReference.incRef(),
-                clientReference -> clientReference.decRef());
-        final LazyInitializable<AmazonEc2Reference, ElasticsearchException> oldClient = this.lazyClientReference.getAndSet(newClient);
-        if (oldClient != null) {
-            oldClient.reset();
-        }
-    }
-
-    @Override
-    public void close() {
-        final LazyInitializable<AmazonEc2Reference, ElasticsearchException> clientReference = this.lazyClientReference.getAndSet(null);
-        if (clientReference != null) {
-            clientReference.reset();
-        }
-        // shutdown IdleConnectionReaper background thread
-        // it will be restarted on new client usage
+        // Ensure that IdleConnectionReaper is shutdown
         IdleConnectionReaper.shutdown();
     }
-
 }

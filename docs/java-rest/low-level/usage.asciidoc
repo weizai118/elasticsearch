@@ -312,16 +312,8 @@ adds an extra header:
 
 ["source","java",subs="attributes,callouts,macros"]
 --------------------------------------------------
-include-tagged::{doc-tests}/RestClientDocumentation.java[rest-client-options-customize-header]
+include-tagged::{doc-tests}/RestClientDocumentation.java[rest-client-options-customize]
 --------------------------------------------------
-
-Or you can send requests to nodes with a particular attribute:
-
-["source","java",subs="attributes,callouts,macros"]
---------------------------------------------------
-include-tagged::{doc-tests}/RestClientDocumentation.java[rest-client-options-customize-attribute]
---------------------------------------------------
-<1> Replace the node selector with one that selects nodes on a particular rack.
 
 
 ==== Multiple parallel asynchronous actions

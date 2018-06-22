@@ -25,6 +25,7 @@ import org.elasticsearch.action.admin.cluster.node.tasks.cancel.CancelTasksReque
 import org.elasticsearch.common.Nullable;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.tasks.CancellableTask;
+import org.elasticsearch.tasks.Task;
 import org.elasticsearch.tasks.TaskId;
 import org.elasticsearch.tasks.TaskManager;
 
@@ -76,9 +77,8 @@ public class AllocatedPersistentTask extends CancellableTask {
      * <p>
      * This doesn't affect the status of this allocated task.
      */
-    public void updatePersistentTaskState(final PersistentTaskState state,
-                                          final ActionListener<PersistentTasksCustomMetaData.PersistentTask<?>> listener) {
-        persistentTasksService.sendUpdateStateRequest(persistentTaskId, allocationId, state, listener);
+    public void updatePersistentStatus(Task.Status status, ActionListener<PersistentTasksCustomMetaData.PersistentTask<?>> listener) {
+        persistentTasksService.updateStatus(persistentTaskId, allocationId, status, listener);
     }
 
     public String getPersistentTaskId() {
@@ -116,7 +116,7 @@ public class AllocatedPersistentTask extends CancellableTask {
     }
 
     protected final boolean isCompleted() {
-        return state.get() == State.COMPLETED;
+        return state.get() ==  State.COMPLETED;
     }
 
     boolean markAsCancelled() {

@@ -24,10 +24,12 @@ import com.microsoft.windowsazure.management.compute.models.DeploymentStatus;
 import com.microsoft.windowsazure.management.compute.models.HostedServiceGetDetailedResponse;
 import com.microsoft.windowsazure.management.compute.models.InstanceEndpoint;
 import com.microsoft.windowsazure.management.compute.models.RoleInstance;
+import org.elasticsearch.Version;
 import org.elasticsearch.cloud.azure.classic.AzureServiceDisableException;
 import org.elasticsearch.cloud.azure.classic.AzureServiceRemoteException;
 import org.elasticsearch.cloud.azure.classic.management.AzureComputeService;
 import org.elasticsearch.cloud.azure.classic.management.AzureComputeService.Discovery;
+import org.elasticsearch.cluster.node.DiscoveryNode;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.component.AbstractComponent;
 import org.elasticsearch.common.network.InetAddresses;
@@ -44,6 +46,9 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
+
+import static java.util.Collections.emptyMap;
+import static java.util.Collections.emptySet;
 
 public class AzureUnicastHostsProvider extends AbstractComponent implements UnicastHostsProvider {
 
@@ -99,7 +104,7 @@ public class AzureUnicastHostsProvider extends AbstractComponent implements Unic
 
     private final TimeValue refreshInterval;
     private long lastRefresh;
-    private List<TransportAddress> dynamicHosts;
+    private List<DiscoveryNode> cachedDiscoNodes;
     private final HostType hostType;
     private final String publicEndpointName;
     private final String deploymentName;
@@ -132,30 +137,30 @@ public class AzureUnicastHostsProvider extends AbstractComponent implements Unic
      * Setting `cloud.azure.refresh_interval` to `0` will disable caching (default).
      */
     @Override
-    public List<TransportAddress> buildDynamicHosts() {
+    public List<DiscoveryNode> buildDynamicNodes() {
         if (refreshInterval.millis() != 0) {
-            if (dynamicHosts != null &&
+            if (cachedDiscoNodes != null &&
                     (refreshInterval.millis() < 0 || (System.currentTimeMillis() - lastRefresh) < refreshInterval.millis())) {
                 logger.trace("using cache to retrieve node list");
-                return dynamicHosts;
+                return cachedDiscoNodes;
             }
             lastRefresh = System.currentTimeMillis();
         }
         logger.debug("start building nodes list using Azure API");
 
-        dynamicHosts = new ArrayList<>();
+        cachedDiscoNodes = new ArrayList<>();
 
         HostedServiceGetDetailedResponse detailed;
         try {
             detailed = azureComputeService.getServiceDetails();
         } catch (AzureServiceDisableException e) {
             logger.debug("Azure discovery service has been disabled. Returning empty list of nodes.");
-            return dynamicHosts;
+            return cachedDiscoNodes;
         } catch (AzureServiceRemoteException e) {
             // We got a remote exception
             logger.warn("can not get list of azure nodes: [{}]. Returning empty list of nodes.", e.getMessage());
             logger.trace("AzureServiceRemoteException caught", e);
-            return dynamicHosts;
+            return cachedDiscoNodes;
         }
 
         InetAddress ipAddress = null;
@@ -207,7 +212,8 @@ public class AzureUnicastHostsProvider extends AbstractComponent implements Unic
                     TransportAddress[] addresses = transportService.addressesFromString(networkAddress, 1);
                     for (TransportAddress address : addresses) {
                         logger.trace("adding {}, transport_address {}", networkAddress, address);
-                        dynamicHosts.add(address);
+                        cachedDiscoNodes.add(new DiscoveryNode("#cloud-" + instance.getInstanceName(), address, emptyMap(),
+                                emptySet(), Version.CURRENT.minimumCompatibilityVersion()));
                     }
                 } catch (Exception e) {
                     logger.warn("can not convert [{}] to transport address. skipping. [{}]", networkAddress, e.getMessage());
@@ -215,9 +221,9 @@ public class AzureUnicastHostsProvider extends AbstractComponent implements Unic
             }
         }
 
-        logger.debug("{} addresses added", dynamicHosts.size());
+        logger.debug("{} node(s) added", cachedDiscoNodes.size());
 
-        return dynamicHosts;
+        return cachedDiscoNodes;
     }
 
     protected String resolveInstanceAddress(final HostType hostType, final RoleInstance instance) {

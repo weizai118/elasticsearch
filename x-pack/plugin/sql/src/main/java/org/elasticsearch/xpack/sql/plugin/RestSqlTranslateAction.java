@@ -40,7 +40,7 @@ public class RestSqlTranslateAction extends BaseRestHandler {
 
     @Override
     public String getName() {
-        return "xpack_sql_translate_action";
+        return "sql_translate_action";
     }
 }
 

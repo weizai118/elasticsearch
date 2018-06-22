@@ -8,6 +8,9 @@ setup:
 
 ---
 "Test open old jobs":
+  - skip:
+      version: "all"
+      reason: "@AwaitsFix: https://github.com/elastic/elasticsearch/issues/30982"
   - do:
       xpack.ml.open_job:
         job_id: old-cluster-job
@@ -74,6 +77,9 @@ setup:
 
 ---
 "Test job with no model memory limit has established model memory after reopening":
+  - skip:
+      version: "all"
+      reason: "@AwaitsFix: https://github.com/elastic/elasticsearch/issues/30982"
   - do:
       xpack.ml.open_job:
         job_id: no-model-memory-limit-job
@@ -94,14 +100,29 @@ setup:
   - match: { acknowledged: true }
 
 ---
-"Test job with pre 6.4 rules":
+"Test get job with rules":
 
   - do:
       xpack.ml.get_jobs:
-        job_id: job-with-old-rules
+        job_id: old-cluster-job-with-rules
   - match: { count: 1 }
-  - is_false: jobs.0.analysis_config.detectors.0.rules
-  - is_false: jobs.0.analysis_config.detectors.0.custom_rules
+  - match: {
+      jobs.0.analysis_config.detectors.0.rules: [
+        {
+          "actions": ["filter_results"],
+          "conditions_connective": "or",
+          "conditions": [
+            {
+              "type":"numerical_actual",
+              "field_name":"country",
+              "field_value": "uk",
+              "condition": {"operator":"lt","value":"33.3"}
+            },
+            {"type":"categorical", "field_name":"country", "filter_id": "foo"}
+          ]
+        }
+      ]
+    }
 
 ---
 "Test get job with function shortcut should expand":

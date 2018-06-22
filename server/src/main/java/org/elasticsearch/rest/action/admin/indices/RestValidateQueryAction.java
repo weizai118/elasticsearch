@@ -19,7 +19,6 @@
 
 package org.elasticsearch.rest.action.admin.indices;
 
-import org.elasticsearch.action.admin.indices.validate.query.QueryExplanation;
 import org.elasticsearch.action.admin.indices.validate.query.ValidateQueryRequest;
 import org.elasticsearch.action.admin.indices.validate.query.ValidateQueryResponse;
 import org.elasticsearch.action.support.IndicesOptions;
@@ -102,7 +101,7 @@ public class RestValidateQueryAction extends BaseRestHandler {
         builder.startObject();
         builder.field(ValidateQueryResponse.VALID_FIELD, false);
         if (explain) {
-            builder.field(QueryExplanation.ERROR_FIELD, error);
+            builder.field(ValidateQueryResponse.ERROR_FIELD, error);
         }
         builder.endObject();
         return new BytesRestResponse(OK, builder);

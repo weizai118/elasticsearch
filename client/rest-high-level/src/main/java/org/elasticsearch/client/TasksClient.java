@@ -84,7 +84,7 @@ public final class TasksClient {
             cancelTasksRequest,
             RequestConverters::cancelTasks,
             options,
-            CancelTasksResponse::fromXContent,
+            parser -> CancelTasksResponse.fromXContent(parser),
             emptySet()
         );
     }
@@ -103,7 +103,7 @@ public final class TasksClient {
             cancelTasksRequest,
             RequestConverters::cancelTasks,
             options,
-            CancelTasksResponse::fromXContent,
+            parser -> CancelTasksResponse.fromXContent(parser),
             listener,
             emptySet()
         );

@@ -22,9 +22,11 @@ package org.elasticsearch.action.search;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.support.ActionFilters;
 import org.elasticsearch.action.support.HandledTransportAction;
+import org.elasticsearch.cluster.metadata.IndexNameExpressionResolver;
 import org.elasticsearch.cluster.service.ClusterService;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.TransportService;
 
 public class TransportClearScrollAction extends HandledTransportAction<ClearScrollRequest, ClearScrollResponse> {
@@ -33,10 +35,11 @@ public class TransportClearScrollAction extends HandledTransportAction<ClearScro
     private final SearchTransportService searchTransportService;
 
     @Inject
-    public TransportClearScrollAction(Settings settings, TransportService transportService,
+    public TransportClearScrollAction(Settings settings, TransportService transportService, ThreadPool threadPool,
                                       ClusterService clusterService, ActionFilters actionFilters,
+                                      IndexNameExpressionResolver indexNameExpressionResolver,
                                       SearchTransportService searchTransportService) {
-        super(settings, ClearScrollAction.NAME, transportService, actionFilters,
+        super(settings, ClearScrollAction.NAME, threadPool, transportService, actionFilters, indexNameExpressionResolver,
             ClearScrollRequest::new);
         this.clusterService = clusterService;
         this.searchTransportService = searchTransportService;

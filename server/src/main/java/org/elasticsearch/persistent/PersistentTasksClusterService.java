@@ -35,6 +35,7 @@ import org.elasticsearch.persistent.PersistentTasksCustomMetaData.Assignment;
 import org.elasticsearch.persistent.PersistentTasksCustomMetaData.PersistentTask;
 import org.elasticsearch.persistent.decider.AssignmentDecision;
 import org.elasticsearch.persistent.decider.EnableAssignmentDecider;
+import org.elasticsearch.tasks.Task;
 
 import java.util.Objects;
 
@@ -177,30 +178,27 @@ public class PersistentTasksClusterService extends AbstractComponent implements 
     }
 
     /**
-     * Update the state of a persistent task
+     * Update task status
      *
-     * @param taskId           the id of a persistent task
-     * @param taskAllocationId the expected allocation id of the persistent task
-     * @param taskState        new state
-     * @param listener         the listener that will be called when task is removed
+     * @param id           the id of a persistent task
+     * @param allocationId the expected allocation id of the persistent task
+     * @param status       new status
+     * @param listener     the listener that will be called when task is removed
      */
-    public void updatePersistentTaskState(final String taskId,
-                                          final long taskAllocationId,
-                                          final PersistentTaskState taskState,
-                                          final ActionListener<PersistentTask<?>> listener) {
-        clusterService.submitStateUpdateTask("update task state", new ClusterStateUpdateTask() {
+    public void updatePersistentTaskStatus(String id, long allocationId, Task.Status status, ActionListener<PersistentTask<?>> listener) {
+        clusterService.submitStateUpdateTask("update task status", new ClusterStateUpdateTask() {
             @Override
             public ClusterState execute(ClusterState currentState) {
                 PersistentTasksCustomMetaData.Builder tasksInProgress = builder(currentState);
-                if (tasksInProgress.hasTask(taskId, taskAllocationId)) {
-                    return update(currentState, tasksInProgress.updateTaskState(taskId, taskState));
+                if (tasksInProgress.hasTask(id, allocationId)) {
+                    return update(currentState, tasksInProgress.updateTaskStatus(id, status));
                 } else {
-                    if (tasksInProgress.hasTask(taskId)) {
-                        logger.warn("trying to update state on task {} with unexpected allocation id {}", taskId, taskAllocationId);
+                    if (tasksInProgress.hasTask(id)) {
+                        logger.warn("trying to update status on task {} with unexpected allocation id {}", id, allocationId);
                     } else {
-                        logger.warn("trying to update state on non-existing task {}", taskId);
+                        logger.warn("trying to update status on non-existing task {}", id);
                     }
-                    throw new ResourceNotFoundException("the task with id {} and allocation id {} doesn't exist", taskId, taskAllocationId);
+                    throw new ResourceNotFoundException("the task with id {} and allocation id {} doesn't exist", id, allocationId);
                 }
             }
 
@@ -211,7 +209,7 @@ public class PersistentTasksClusterService extends AbstractComponent implements 
 
             @Override
             public void clusterStateProcessed(String source, ClusterState oldState, ClusterState newState) {
-                listener.onResponse(PersistentTasksCustomMetaData.getTaskWithId(newState, taskId));
+                listener.onResponse(PersistentTasksCustomMetaData.getTaskWithId(newState, id));
             }
         });
     }

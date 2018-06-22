@@ -365,7 +365,6 @@ public class SSLDriver implements AutoCloseable {
 
         @Override
         public void read(InboundChannelBuffer buffer) throws SSLException {
-            ensureApplicationBufferSize(buffer);
             boolean continueUnwrap = true;
             while (continueUnwrap && networkReadBuffer.position() > 0) {
                 networkReadBuffer.flip();

@@ -9,6 +9,7 @@ import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.support.ActionFilters;
 import org.elasticsearch.action.support.HandledTransportAction;
 import org.elasticsearch.client.Client;
+import org.elasticsearch.cluster.metadata.IndexNameExpressionResolver;
 import org.elasticsearch.cluster.service.ClusterService;
 import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.common.inject.Inject;
@@ -31,21 +32,19 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Optional;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 public class TransportPreviewDatafeedAction extends HandledTransportAction<PreviewDatafeedAction.Request, PreviewDatafeedAction.Response> {
 
-    private final ThreadPool threadPool;
     private final Client client;
     private final ClusterService clusterService;
 
     @Inject
     public TransportPreviewDatafeedAction(Settings settings, ThreadPool threadPool, TransportService transportService,
-                                          ActionFilters actionFilters, Client client, ClusterService clusterService) {
-        super(settings, PreviewDatafeedAction.NAME, transportService, actionFilters,
-            (Supplier<PreviewDatafeedAction.Request>) PreviewDatafeedAction.Request::new);
-        this.threadPool = threadPool;
+                                          ActionFilters actionFilters, IndexNameExpressionResolver indexNameExpressionResolver,
+                                          Client client, ClusterService clusterService) {
+        super(settings, PreviewDatafeedAction.NAME, threadPool, transportService, actionFilters, indexNameExpressionResolver,
+                PreviewDatafeedAction.Request::new);
         this.client = client;
         this.clusterService = clusterService;
     }

@@ -19,20 +19,19 @@
 
 package org.elasticsearch.nio;
 
-import java.net.InetSocketAddress;
+import java.io.IOException;
 import java.nio.channels.ServerSocketChannel;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class NioServerSocketChannel extends NioChannel {
 
-    private final ServerSocketChannel serverSocketChannel;
+    private final ServerSocketChannel socketChannel;
     private final AtomicBoolean contextSet = new AtomicBoolean(false);
-    private volatile InetSocketAddress localAddress;
     private ServerChannelContext context;
 
-    public NioServerSocketChannel(ServerSocketChannel serverSocketChannel) {
-        this.serverSocketChannel = serverSocketChannel;
-        attemptToSetLocalAddress();
+    public NioServerSocketChannel(ServerSocketChannel socketChannel) throws IOException {
+        super(socketChannel);
+        this.socketChannel = socketChannel;
     }
 
     /**
@@ -50,14 +49,8 @@ public class NioServerSocketChannel extends NioChannel {
     }
 
     @Override
-    public InetSocketAddress getLocalAddress() {
-        attemptToSetLocalAddress();
-        return localAddress;
-    }
-
-    @Override
     public ServerSocketChannel getRawChannel() {
-        return serverSocketChannel;
+        return socketChannel;
     }
 
     @Override
@@ -70,11 +63,5 @@ public class NioServerSocketChannel extends NioChannel {
         return "NioServerSocketChannel{" +
             "localAddress=" + getLocalAddress() +
             '}';
-    }
-
-    private void attemptToSetLocalAddress() {
-        if (localAddress == null) {
-            localAddress = (InetSocketAddress) serverSocketChannel.socket().getLocalSocketAddress();
-        }
     }
 }

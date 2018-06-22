@@ -22,7 +22,6 @@ import org.elasticsearch.cluster.node.DiscoveryNode;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.util.concurrent.ConcurrentCollections;
 
-import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -36,7 +35,6 @@ public class BlockingClusterStatePublishResponseHandler {
 
     private final CountDownLatch latch;
     private final Set<DiscoveryNode> pendingNodes;
-    private final Set<DiscoveryNode> failedNodes;
 
     /**
      * Creates a new BlockingClusterStatePublishResponseHandler
@@ -46,7 +44,6 @@ public class BlockingClusterStatePublishResponseHandler {
         this.pendingNodes = ConcurrentCollections.newConcurrentSet();
         this.pendingNodes.addAll(publishingToNodes);
         this.latch = new CountDownLatch(pendingNodes.size());
-        this.failedNodes = ConcurrentCollections.newConcurrentSet();
     }
 
     /**
@@ -67,8 +64,6 @@ public class BlockingClusterStatePublishResponseHandler {
     public void onFailure(DiscoveryNode node, Exception e) {
         boolean found = pendingNodes.remove(node);
         assert found : "node [" + node + "] already responded or failed";
-        boolean added = failedNodes.add(node);
-        assert added : "duplicate failures for " + node;
         latch.countDown();
     }
 
@@ -90,12 +85,5 @@ public class BlockingClusterStatePublishResponseHandler {
         // we use a zero length array, because if we try to pre allocate we may need to remove trailing
         // nulls if some nodes responded in the meanwhile
         return pendingNodes.toArray(new DiscoveryNode[0]);
-    }
-
-    /**
-     * returns a set of nodes for which publication has failed.
-     */
-    public Set<DiscoveryNode> getFailedNodes() {
-        return Collections.unmodifiableSet(failedNodes);
     }
 }

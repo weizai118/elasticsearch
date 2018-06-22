@@ -39,6 +39,7 @@ import org.apache.lucene.index.NoMergePolicy;
 import org.apache.lucene.index.SegmentInfos;
 import org.apache.lucene.index.SnapshotDeletionPolicy;
 import org.apache.lucene.index.Term;
+import org.apache.lucene.store.AlreadyClosedException;
 import org.apache.lucene.store.BaseDirectoryWrapper;
 import org.apache.lucene.store.ChecksumIndexInput;
 import org.apache.lucene.store.Directory;
@@ -144,8 +145,18 @@ public class StoreTests extends ESTestCase {
         store.decRef();
         assertThat(store.refCount(), Matchers.equalTo(0));
         assertFalse(store.tryIncRef());
-        expectThrows(IllegalStateException.class, store::incRef);
-        expectThrows(IllegalStateException.class, store::ensureOpen);
+        try {
+            store.incRef();
+            fail(" expected exception");
+        } catch (AlreadyClosedException ex) {
+
+        }
+        try {
+            store.ensureOpen();
+            fail(" expected exception");
+        } catch (AlreadyClosedException ex) {
+
+        }
     }
 
     public void testVerifyingIndexOutput() throws IOException {

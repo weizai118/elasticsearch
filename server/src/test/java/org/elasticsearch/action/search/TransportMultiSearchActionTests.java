@@ -23,8 +23,7 @@ import org.elasticsearch.Version;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.support.ActionFilter;
 import org.elasticsearch.action.support.ActionFilters;
-import org.elasticsearch.action.support.ActionTestUtils;
-import org.elasticsearch.client.node.NodeClient;
+import org.elasticsearch.action.support.TransportAction;
 import org.elasticsearch.cluster.ClusterName;
 import org.elasticsearch.cluster.ClusterState;
 import org.elasticsearch.cluster.metadata.IndexNameExpressionResolver;
@@ -107,14 +106,15 @@ public class TransportMultiSearchActionTests extends ESTestCase {
         final ExecutorService commonExecutor = threadPool.executor(threadPoolNames.get(0));
         final ExecutorService rarelyExecutor = threadPool.executor(threadPoolNames.get(1));
         final Set<SearchRequest> requests = Collections.newSetFromMap(Collections.synchronizedMap(new IdentityHashMap<>()));
-        NodeClient client = new NodeClient(settings, threadPool) {
+        TransportAction<SearchRequest, SearchResponse> searchAction = new TransportAction<SearchRequest, SearchResponse>
+                (Settings.EMPTY, "action", threadPool, actionFilters, resolver, taskManager) {
             @Override
-            public void search(final SearchRequest request, final ActionListener<SearchResponse> listener) {
+            protected void doExecute(SearchRequest request, ActionListener<SearchResponse> listener) {
                 requests.add(request);
                 int currentConcurrentSearches = counter.incrementAndGet();
                 if (currentConcurrentSearches > maxAllowedConcurrentSearches) {
                     errorHolder.set(new AssertionError("Current concurrent search [" + currentConcurrentSearches +
-                        "] is higher than is allowed [" + maxAllowedConcurrentSearches + "]"));
+                            "] is higher than is allowed [" + maxAllowedConcurrentSearches + "]"));
                 }
                 final ExecutorService executorService = rarely() ? rarelyExecutor : commonExecutor;
                 executorService.execute(() -> {
@@ -125,7 +125,8 @@ public class TransportMultiSearchActionTests extends ESTestCase {
         };
 
         TransportMultiSearchAction action =
-            new TransportMultiSearchAction(threadPool, actionFilters, transportService, clusterService, 10, System::nanoTime, client);
+                new TransportMultiSearchAction(threadPool, actionFilters, transportService, clusterService, searchAction, resolver, 10,
+                System::nanoTime);
 
         // Execute the multi search api and fail if we find an error after executing:
         try {
@@ -140,7 +141,7 @@ public class TransportMultiSearchActionTests extends ESTestCase {
                 multiSearchRequest.add(new SearchRequest());
             }
 
-            MultiSearchResponse response = ActionTestUtils.executeBlocking(action, multiSearchRequest);
+            MultiSearchResponse response = action.execute(multiSearchRequest).actionGet();
             assertThat(response.getResponses().length, equalTo(numSearchRequests));
             assertThat(requests.size(), equalTo(numSearchRequests));
             assertThat(errorHolder.get(), nullValue());

@@ -120,13 +120,7 @@ public class Setting<T> implements ToXContentObject {
          * Mark this setting as not copyable during an index resize (shrink or split). This property can only be applied to settings that
          * also have {@link Property#IndexScope}.
          */
-        NotCopyableOnResize,
-
-        /**
-         * Indicates an index-level setting that is managed internally. Such a setting can only be added to an index on index creation but
-         * can not be updated via the update API.
-         */
-        InternalIndex
+        NotCopyableOnResize
     }
 
     private final Key key;
@@ -158,15 +152,11 @@ public class Setting<T> implements ToXContentObject {
             if (propertiesAsSet.contains(Property.Dynamic) && propertiesAsSet.contains(Property.Final)) {
                 throw new IllegalArgumentException("final setting [" + key + "] cannot be dynamic");
             }
-            checkPropertyRequiresIndexScope(propertiesAsSet, Property.NotCopyableOnResize);
-            checkPropertyRequiresIndexScope(propertiesAsSet, Property.InternalIndex);
+            if (propertiesAsSet.contains(Property.NotCopyableOnResize) && propertiesAsSet.contains(Property.IndexScope) == false) {
+                throw new IllegalArgumentException(
+                        "non-index-scoped setting [" + key + "] can not have property [" + Property.NotCopyableOnResize + "]");
+            }
             this.properties = propertiesAsSet;
-        }
-    }
-
-    private void checkPropertyRequiresIndexScope(final EnumSet<Property> properties, final Property property) {
-        if (properties.contains(property) && properties.contains(Property.IndexScope) == false) {
-            throw new IllegalArgumentException("non-index-scoped setting [" + key + "] can not have property [" + property + "]");
         }
     }
 

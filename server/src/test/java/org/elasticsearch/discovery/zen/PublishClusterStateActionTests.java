@@ -42,7 +42,6 @@ import org.elasticsearch.common.io.stream.NamedWriteableRegistry;
 import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.common.settings.ClusterSettings;
 import org.elasticsearch.common.settings.Settings;
-import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.discovery.Discovery;
 import org.elasticsearch.discovery.DiscoverySettings;
 import org.elasticsearch.node.Node;
@@ -816,16 +815,9 @@ public class PublishClusterStateActionTests extends ESTestCase {
     public static class AssertingAckListener implements Discovery.AckListener {
         private final List<Tuple<DiscoveryNode, Throwable>> errors = new CopyOnWriteArrayList<>();
         private final CountDownLatch countDown;
-        private final CountDownLatch commitCountDown;
 
         public AssertingAckListener(int nodeCount) {
             countDown = new CountDownLatch(nodeCount);
-            commitCountDown = new CountDownLatch(1);
-        }
-
-        @Override
-        public void onCommit(TimeValue commitTime) {
-            commitCountDown.countDown();
         }
 
         @Override
@@ -838,7 +830,6 @@ public class PublishClusterStateActionTests extends ESTestCase {
 
         public void await(long timeout, TimeUnit unit) throws InterruptedException {
             assertThat(awaitErrors(timeout, unit), emptyIterable());
-            assertTrue(commitCountDown.await(timeout, unit));
         }
 
         public List<Tuple<DiscoveryNode, Throwable>> awaitErrors(long timeout, TimeUnit unit) throws InterruptedException {

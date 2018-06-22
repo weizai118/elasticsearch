@@ -23,6 +23,7 @@ import org.elasticsearch.action.FailedNodeException;
 import org.elasticsearch.action.support.ActionFilters;
 import org.elasticsearch.action.support.nodes.BaseNodeRequest;
 import org.elasticsearch.action.support.nodes.TransportNodesAction;
+import org.elasticsearch.cluster.metadata.IndexNameExpressionResolver;
 import org.elasticsearch.cluster.service.ClusterService;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.io.stream.StreamInput;
@@ -45,9 +46,10 @@ public class TransportNodesStatsAction extends TransportNodesAction<NodesStatsRe
     @Inject
     public TransportNodesStatsAction(Settings settings, ThreadPool threadPool,
                                      ClusterService clusterService, TransportService transportService,
-                                     NodeService nodeService, ActionFilters actionFilters) {
+                                     NodeService nodeService, ActionFilters actionFilters,
+                                     IndexNameExpressionResolver indexNameExpressionResolver) {
         super(settings, NodesStatsAction.NAME, threadPool, clusterService, transportService, actionFilters,
-            NodesStatsRequest::new, NodeStatsRequest::new, ThreadPool.Names.MANAGEMENT, NodeStats.class);
+              indexNameExpressionResolver, NodesStatsRequest::new, NodeStatsRequest::new, ThreadPool.Names.MANAGEMENT, NodeStats.class);
         this.nodeService = nodeService;
     }
 

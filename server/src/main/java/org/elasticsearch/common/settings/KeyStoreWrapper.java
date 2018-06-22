@@ -308,9 +308,7 @@ public class KeyStoreWrapper implements SecureSettings {
         }
         if (formatVersion <= 2) {
             decryptLegacyEntries();
-            if (password.length != 0) {
-                throw new IllegalArgumentException("Keystore format does not accept non-empty passwords");
-            }
+            assert password.length == 0;
             return;
         }
 

@@ -13,9 +13,10 @@ import org.elasticsearch.action.ShardOperationFailedException;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.ShardSearchFailure;
+import org.elasticsearch.action.search.TransportSearchAction;
 import org.elasticsearch.action.support.ActionFilters;
 import org.elasticsearch.action.support.HandledTransportAction;
-import org.elasticsearch.client.node.NodeClient;
+import org.elasticsearch.cluster.metadata.IndexNameExpressionResolver;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.unit.TimeValue;
@@ -57,7 +58,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
 
 /**
  * Performs a series of elasticsearch queries and aggregations to explore
@@ -65,8 +65,7 @@ import java.util.function.Supplier;
  */
 public class TransportGraphExploreAction extends HandledTransportAction<GraphExploreRequest, GraphExploreResponse> {
 
-    private final ThreadPool threadPool;
-    private final NodeClient client;
+    private final TransportSearchAction searchAction;
     protected final XPackLicenseState licenseState;
 
     static class VertexPriorityQueue extends PriorityQueue<Vertex> {
@@ -83,11 +82,12 @@ public class TransportGraphExploreAction extends HandledTransportAction<GraphExp
     }
 
     @Inject
-    public TransportGraphExploreAction(Settings settings, ThreadPool threadPool, NodeClient client,
-            TransportService transportService, ActionFilters actionFilters, XPackLicenseState licenseState) {
-        super(settings, GraphExploreAction.NAME, transportService, actionFilters, (Supplier<GraphExploreRequest>)GraphExploreRequest::new);
-        this.threadPool = threadPool;
-        this.client = client;
+    public TransportGraphExploreAction(Settings settings, ThreadPool threadPool, TransportSearchAction transportSearchAction,
+            TransportService transportService, ActionFilters actionFilters, IndexNameExpressionResolver indexNameExpressionResolver,
+            XPackLicenseState licenseState) {
+        super(settings, GraphExploreAction.NAME, threadPool, transportService, actionFilters, indexNameExpressionResolver,
+                GraphExploreRequest::new);
+        this.searchAction = transportSearchAction;
         this.licenseState = licenseState;
     }
 
@@ -313,7 +313,7 @@ public class TransportGraphExploreAction extends HandledTransportAction<GraphExp
 
             // System.out.println(source);
             logger.trace("executing expansion graph search request");
-            client.search(searchRequest, new ActionListener<SearchResponse>() {
+            searchAction.execute(searchRequest, new ActionListener<SearchResponse>() {
                 @Override
                 public void onResponse(SearchResponse searchResponse) {
                     // System.out.println(searchResponse);
@@ -660,7 +660,7 @@ public class TransportGraphExploreAction extends HandledTransportAction<GraphExp
                 searchRequest.source(source);
                 // System.out.println(source);
                 logger.trace("executing initial graph search request");
-                client.search(searchRequest, new ActionListener<SearchResponse>() {
+                searchAction.execute(searchRequest, new ActionListener<SearchResponse>() {
                     @Override
                     public void onResponse(SearchResponse searchResponse) {
                         addShardFailures(searchResponse.getShardFailures());

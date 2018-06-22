@@ -27,8 +27,6 @@ import org.elasticsearch.action.support.broadcast.BroadcastRequest;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
-import org.elasticsearch.common.xcontent.ToXContentObject;
-import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.index.query.MatchAllQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
 
@@ -40,7 +38,7 @@ import java.util.Arrays;
  * <p>
  * The request requires the query to be set using {@link #query(QueryBuilder)}
  */
-public class ValidateQueryRequest extends BroadcastRequest<ValidateQueryRequest> implements ToXContentObject {
+public class ValidateQueryRequest extends BroadcastRequest<ValidateQueryRequest> {
 
     private QueryBuilder query = new MatchAllQueryBuilder();
 
@@ -180,13 +178,5 @@ public class ValidateQueryRequest extends BroadcastRequest<ValidateQueryRequest>
     public String toString() {
         return "[" + Arrays.toString(indices) + "]" + Arrays.toString(types) + ", query[" + query + "], explain:" + explain +
                 ", rewrite:" + rewrite + ", all_shards:" + allShards;
-    }
-
-    @Override
-    public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
-        builder.startObject();
-        builder.field("query");
-        query.toXContent(builder, params);
-        return builder.endObject();
     }
 }

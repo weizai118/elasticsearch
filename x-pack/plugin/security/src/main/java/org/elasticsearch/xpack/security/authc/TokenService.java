@@ -1007,7 +1007,7 @@ public final class TokenService extends AbstractComponent {
      */
     private String getFromHeader(ThreadContext threadContext) {
         String header = threadContext.getHeader("Authorization");
-        if (Strings.hasText(header) && header.regionMatches(true, 0, "Bearer ", 0, "Bearer ".length())
+        if (Strings.hasLength(header) && header.startsWith("Bearer ")
                 && header.length() > "Bearer ".length()) {
             return header.substring("Bearer ".length());
         }

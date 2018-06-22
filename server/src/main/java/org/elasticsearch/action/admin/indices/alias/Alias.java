@@ -20,7 +20,6 @@
 package org.elasticsearch.action.admin.indices.alias;
 
 import org.elasticsearch.ElasticsearchGenerationException;
-import org.elasticsearch.Version;
 import org.elasticsearch.common.Nullable;
 import org.elasticsearch.common.ParseField;
 import org.elasticsearch.common.Strings;
@@ -50,7 +49,6 @@ public class Alias implements Streamable, ToXContentFragment {
     private static final ParseField ROUTING = new ParseField("routing");
     private static final ParseField INDEX_ROUTING = new ParseField("index_routing", "indexRouting", "index-routing");
     private static final ParseField SEARCH_ROUTING = new ParseField("search_routing", "searchRouting", "search-routing");
-    private static final ParseField IS_WRITE_INDEX = new ParseField("is_write_index");
 
     private String name;
 
@@ -62,9 +60,6 @@ public class Alias implements Streamable, ToXContentFragment {
 
     @Nullable
     private String searchRouting;
-
-    @Nullable
-    private Boolean writeIndex;
 
     private Alias() {
 
@@ -173,21 +168,6 @@ public class Alias implements Streamable, ToXContentFragment {
     }
 
     /**
-     * @return the write index flag for the alias
-     */
-    public Boolean writeIndex() {
-        return writeIndex;
-    }
-
-    /**
-     *  Sets whether an alias is pointing to a write-index
-     */
-    public Alias writeIndex(@Nullable Boolean writeIndex) {
-        this.writeIndex = writeIndex;
-        return this;
-    }
-
-    /**
      * Allows to read an alias from the provided input stream
      */
     public static Alias read(StreamInput in) throws IOException {
@@ -202,11 +182,6 @@ public class Alias implements Streamable, ToXContentFragment {
         filter = in.readOptionalString();
         indexRouting = in.readOptionalString();
         searchRouting = in.readOptionalString();
-        if (in.getVersion().onOrAfter(Version.V_6_4_0)) {
-            writeIndex = in.readOptionalBoolean();
-        } else {
-            writeIndex = null;
-        }
     }
 
     @Override
@@ -215,9 +190,6 @@ public class Alias implements Streamable, ToXContentFragment {
         out.writeOptionalString(filter);
         out.writeOptionalString(indexRouting);
         out.writeOptionalString(searchRouting);
-        if (out.getVersion().onOrAfter(Version.V_6_4_0)) {
-            out.writeOptionalBoolean(writeIndex);
-        }
     }
 
     /**
@@ -247,10 +219,6 @@ public class Alias implements Streamable, ToXContentFragment {
                 } else if (SEARCH_ROUTING.match(currentFieldName, parser.getDeprecationHandler())) {
                     alias.searchRouting(parser.text());
                 }
-            } else if (token == XContentParser.Token.VALUE_BOOLEAN) {
-                if (IS_WRITE_INDEX.match(currentFieldName, parser.getDeprecationHandler())) {
-                    alias.writeIndex(parser.booleanValue());
-                }
             }
         }
         return alias;
@@ -276,8 +244,6 @@ public class Alias implements Streamable, ToXContentFragment {
                 builder.field(SEARCH_ROUTING.getPreferredName(), searchRouting);
             }
         }
-
-        builder.field(IS_WRITE_INDEX.getPreferredName(), writeIndex);
 
         builder.endObject();
         return builder;

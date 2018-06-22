@@ -5,14 +5,10 @@
  */
 package org.elasticsearch.xpack.core.ml.action;
 
-import org.elasticsearch.common.xcontent.XContentParser;
-import org.elasticsearch.test.AbstractStreamableXContentTestCase;
-import org.elasticsearch.xpack.core.ml.calendars.Calendar;
+import org.elasticsearch.test.AbstractStreamableTestCase;
 import org.elasticsearch.xpack.core.ml.calendars.CalendarTests;
 
-import java.io.IOException;
-
-public class PutCalendarActionResponseTests extends AbstractStreamableXContentTestCase<PutCalendarAction.Response> {
+public class PutCalendarActionResponseTests extends AbstractStreamableTestCase<PutCalendarAction.Response> {
 
     @Override
     protected PutCalendarAction.Response createTestInstance() {
@@ -22,10 +18,5 @@ public class PutCalendarActionResponseTests extends AbstractStreamableXContentTe
     @Override
     protected PutCalendarAction.Response createBlankInstance() {
         return new PutCalendarAction.Response();
-    }
-
-    @Override
-    protected PutCalendarAction.Response doParseInstance(XContentParser parser) throws IOException {
-        return new PutCalendarAction.Response(Calendar.LENIENT_PARSER.parse(parser, null).build());
     }
 }
